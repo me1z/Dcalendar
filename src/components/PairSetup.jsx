@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Users, Copy, Check, X, Link, UserPlus, Info, Trash2, AlertCircle } from 'lucide-react'
 import { usePairSync } from '../hooks/usePairSync'
 
-function PairSetup({ onClose }) {
+function PairSetup({ onClose, onPairCreated }) {
   const [mode, setMode] = useState('menu') // menu, create, join, info
   const [joinCode, setJoinCode] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
@@ -101,8 +101,12 @@ function PairSetup({ onClose }) {
           </p>
           <button
             onClick={() => {
-              setMode('menu')
-              onClose()
+              if (onPairCreated) {
+                onPairCreated()
+              } else {
+                setMode('menu')
+                onClose()
+              }
             }}
             className="btn-primary w-full"
           >

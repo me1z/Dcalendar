@@ -14,6 +14,7 @@ import EventList from './components/EventList'
 import PairSetup from './components/PairSetup'
 import PairRequired from './components/PairRequired'
 import NotificationSettings from './components/NotificationSettings'
+import ProfileSettings from './components/ProfileSettings'
 
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   const [showEventForm, setShowEventForm] = useState(false)
   const [showPairSetup, setShowPairSetup] = useState(false)
   const [showNotificationSettings, setShowNotificationSettings] = useState(false)
+  const [showProfileSettings, setShowProfileSettings] = useState(false)
 
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
@@ -186,7 +188,14 @@ function App() {
         
         {/* Pair Setup Modal */}
         {showPairSetup && (
-          <PairSetup onClose={() => setShowPairSetup(false)} />
+          <PairSetup 
+            onClose={() => setShowPairSetup(false)} 
+            onPairCreated={() => {
+              setShowPairSetup(false)
+              // Принудительно обновляем состояние
+              window.location.reload()
+            }}
+          />
         )}
       </div>
     )
@@ -239,14 +248,23 @@ function App() {
 
               
 
-              {/* Notification Settings */}
-              <button
-                onClick={() => setShowNotificationSettings(true)}
-                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                title="Настройки уведомлений"
-              >
-                <Bell size={20} />
-              </button>
+                             {/* Notification Settings */}
+               <button
+                 onClick={() => setShowNotificationSettings(true)}
+                 className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                 title="Настройки уведомлений"
+               >
+                 <Bell size={20} />
+               </button>
+
+               {/* Profile Settings */}
+               <button
+                 onClick={() => setShowProfileSettings(true)}
+                 className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                 title="Настройки профиля"
+               >
+                 <Settings size={20} />
+               </button>
 
               {/* Add Event Button */}
               <button
@@ -335,16 +353,27 @@ function App() {
               
 
               
-              <button
-                onClick={() => {
-                  setShowNotificationSettings(true)
-                  setShowMobileSidebar(false)
-                }}
-                className="w-full btn-secondary flex items-center gap-2"
-              >
-                <Bell size={20} />
-                Уведомления
-              </button>
+                             <button
+                 onClick={() => {
+                   setShowNotificationSettings(true)
+                   setShowMobileSidebar(false)
+                 }}
+                 className="w-full btn-secondary flex items-center gap-2"
+               >
+                 <Bell size={20} />
+                 Уведомления
+               </button>
+
+               <button
+                 onClick={() => {
+                   setShowProfileSettings(true)
+                   setShowMobileSidebar(false)
+                 }}
+                 className="w-full btn-secondary flex items-center gap-2"
+               >
+                 <Settings size={20} />
+                 Профиль
+               </button>
             </div>
           </div>
         </div>
@@ -366,11 +395,17 @@ function App() {
         <PairSetup onClose={() => setShowPairSetup(false)} />
       )}
 
-      {showNotificationSettings && (
-                  <NotificationSettings 
-            onClose={() => setShowNotificationSettings(false)}
-          />
-      )}
+             {showNotificationSettings && (
+         <NotificationSettings 
+           onClose={() => setShowNotificationSettings(false)}
+         />
+       )}
+
+       {showProfileSettings && (
+         <ProfileSettings 
+           onClose={() => setShowProfileSettings(false)}
+         />
+       )}
 
 
 

@@ -39,6 +39,11 @@ export function usePairSync() {
       setIsPaired(true)
       setSyncStatus('connected')
       
+      // Принудительно обновляем состояние
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+      
       return mockPartnerInfo
     } catch (error) {
       setSyncStatus('error')
