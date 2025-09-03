@@ -1,16 +1,17 @@
-import React, { useState } from 'react'
-import { Bell, X, Clock, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Bell, X, Clock, Calendar, CheckCircle, AlertCircle, Bot } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 
-function NotificationSettings({ onClose }) {
+function NotificationSettings({ onClose, onOpenTelegramSettings }) {
   const [settings, setSettings] = useState({
-    enabled: true,
+    browser: true,
+    telegram: false,
     events: true,
     tasks: true,
     reminders: true,
     sound: true,
     vibration: true,
-    reminderTime: 15, // минуты до события
+    reminderTime: 15,
     quietHours: {
       enabled: false,
       start: '22:00',
@@ -21,18 +22,31 @@ function NotificationSettings({ onClose }) {
   const {
     isSupported,
     permission,
-    requestPermission
+    requestPermission,
+    updateSettings: updateNotificationSettings
   } = useNotifications()
 
+  useEffect(() => {
+    // Загружаем настройки
+    const savedSettings = localStorage.getItem('notificationSettings')
+    if (savedSettings) {
+      setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }))
+    }
+  }, [])
+
   const handleSettingChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
+    const newSettings = { ...settings, [key]: value }
+    setSettings(newSettings)
+    updateNotificationSettings(newSettings)
   }
 
   const handleQuietHoursChange = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      quietHours: { ...prev.quietHours, [key]: value }
-    }))
+    const newSettings = {
+      ...settings,
+      quietHours: { ...settings.quietHours, [key]: value }
+    }
+    setSettings(newSettings)
+    updateNotificationSettings(newSettings)
   }
 
   const handleRequestPermission = async () => {
@@ -110,29 +124,61 @@ function NotificationSettings({ onClose }) {
             )}
           </div>
 
-          {/* General Settings */}
+          {/* Notification Channels */}
           <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">Общие настройки</h3>
+            <h3 className="font-medium text-gray-900">Каналы уведомлений</h3>
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bell size={20} className="text-gray-600" />
                 <div>
-                  <div className="font-medium text-gray-900">Уведомления</div>
-                  <div className="text-sm text-gray-600">Включить все уведомления</div>
+                  <div className="font-medium text-gray-900">Браузер</div>
+                  <div className="text-sm text-gray-600">Push-уведомления в браузере</div>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={settings.enabled}
-                  onChange={(e) => handleSettingChange('enabled', e.target.checked)}
+                  checked={settings.browser}
+                  onChange={(e) => handleSettingChange('browser', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
 
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bot size={20} className="text-gray-600" />
+                <div>
+                  <div className="font-medium text-gray-900">Telegram</div>
+                  <div className="text-sm text-gray-600">Уведомления в Telegram</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.telegram}
+                    onChange={(e) => handleSettingChange('telegram', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+                <button
+                  onClick={onOpenTelegramSettings}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Настроить
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* General Settings */}
+          <div className="space-y-4">
+            <h3 className="font-medium text-gray-900">Общие настройки</h3>
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Calendar size={20} className="text-gray-600" />
@@ -145,13 +191,10 @@ function NotificationSettings({ onClose }) {
                 <input
                   type="checkbox"
                   checked={settings.events}
-                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingChange('events', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 ${
-                  settings.enabled ? 'bg-gray-200 peer-focus:ring-4 peer-focus:ring-primary-300' : 'bg-gray-100'
-                }`}></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
 
@@ -167,13 +210,10 @@ function NotificationSettings({ onClose }) {
                 <input
                   type="checkbox"
                   checked={settings.tasks}
-                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingChange('tasks', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 ${
-                  settings.enabled ? 'bg-gray-200 peer-focus:ring-4 peer-focus:ring-primary-300' : 'bg-gray-100'
-                }`}></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
 
@@ -189,13 +229,10 @@ function NotificationSettings({ onClose }) {
                 <input
                   type="checkbox"
                   checked={settings.reminders}
-                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingChange('reminders', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 ${
-                  settings.enabled ? 'bg-gray-200 peer-focus:ring-4 peer-focus:ring-primary-300' : 'bg-gray-100'
-                }`}></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
           </div>
@@ -280,37 +317,29 @@ function NotificationSettings({ onClose }) {
                 <input
                   type="checkbox"
                   checked={settings.sound}
-                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingChange('sound', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 ${
-                  settings.enabled ? 'bg-gray-200 peer-focus:ring-4 peer-focus:ring-primary-300' : 'bg-gray-100'
-                }`}></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 flex items-center justify-center">
-                  <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">Вибрация</div>
-                  <div className="text-sm text-gray-600">Вибрация при уведомлениях</div>
-                </div>
+              <div className="w-5 h-5 flex items-center justify-center">
+                <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
+              </div>
+              <div>
+                <div className="font-medium text-gray-900">Вибрация</div>
+                <div className="text-sm text-gray-600">Вибрация при уведомлениях</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={settings.vibration}
-                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingChange('vibration', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 ${
-                  settings.enabled ? 'bg-gray-200 peer-focus:ring-4 peer-focus:ring-primary-300' : 'bg-gray-100'
-                }`}></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
           </div>
@@ -321,17 +350,7 @@ function NotificationSettings({ onClose }) {
               onClick={onClose}
               className="btn-secondary flex-1"
             >
-              Отмена
-            </button>
-            <button
-              onClick={() => {
-                // Сохраняем настройки
-                localStorage.setItem('notificationSettings', JSON.stringify(settings))
-                onClose()
-              }}
-              className="btn-primary flex-1"
-            >
-              Сохранить
+              Закрыть
             </button>
           </div>
         </div>

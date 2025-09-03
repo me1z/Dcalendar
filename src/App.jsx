@@ -1,181 +1,273 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Plus, CheckCircle, Clock, Users, Bell, Settings, Menu, X } from 'lucide-react'
-import CalendarView from './components/CalendarView'
-import EventForm from './components/EventForm'
-import EventList from './components/EventList'
-import PairSetup from './components/PairSetup'
-import NotificationSettings from './components/NotificationSettings'
-import { useTelegramApp } from './hooks/useTelegramApp'
+import { Calendar, Plus, List, Settings, Users, Bell, Menu, X, Bot } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useNotifications } from './hooks/useNotifications'
 import { usePairSync } from './hooks/usePairSync'
+import { useTelegramBot } from './hooks/useTelegramBot'
+import { useTelegramApp } from './hooks/useTelegramApp'
+import EventForm from './components/EventForm'
+import CalendarView from './components/CalendarView'
+import EventList from './components/EventList'
+import PairSetup from './components/PairSetup'
+import NotificationSettings from './components/NotificationSettings'
+import TelegramBotSettings from './components/TelegramBotSettings'
+import { Analytics } from '@vercel/analytics/react'
 
 function App() {
+  const [events, setEvents] = useLocalStorage('events', [])
   const [activeTab, setActiveTab] = useState('calendar')
   const [showEventForm, setShowEventForm] = useState(false)
   const [showPairSetup, setShowPairSetup] = useState(false)
   const [showNotificationSettings, setShowNotificationSettings] = useState(false)
-  const [showSidebar, setShowSidebar] = useState(false)
-  const [events, setEvents] = useLocalStorage('events', [])
-  const [selectedEvent, setSelectedEvent] = useState(null)
-  
-  const { tg } = useTelegramApp()
-  const { showNotification, scheduleNotification } = useNotifications()
-  const { isPaired, partnerInfo, syncStatus, syncData } = usePairSync()
+  const [showTelegramSettings, setShowTelegramSettings] = useState(false)
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
 
-  useEffect(() => {
-    if (tg) {
-      tg.ready()
-      tg.expand()
-    }
-  }, [tg])
+  const { sendSmartNotification } = useNotifications()
+  const { isPaired, syncData } = usePairSync()
+  const { sendEventNotification, sendPairNotification } = useTelegramBot()
+  const { user, theme, showAlert } = useTelegramApp()
 
-  // Загружаем сохраненные настройки уведомлений
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('notificationSettings')
-    if (savedSettings) {
-      const settings = JSON.parse(savedSettings)
-      if (settings.enabled && settings.reminders) {
-        // Планируем уведомления для существующих событий
-        events.forEach(event => {
-          if (!event.notificationScheduled) {
-            scheduleEventNotification(event, settings.reminderTime)
-          }
-        })
-      }
-    }
-  }, [])
-
-  const addEvent = async (event) => {
+  // Обработка добавления события
+  const addEvent = async (eventData) => {
     const newEvent = {
-      id: Date.now(),
-      ...event,
+      ...eventData,
+      id: Date.now().toString(),
       createdAt: new Date().toISOString(),
-      completed: false,
-      notificationScheduled: false
+      completed: false
     }
-    
+
     setEvents(prev => [...prev, newEvent])
     setShowEventForm(false)
+    setEditingEvent(null)
 
-    // Планируем уведомление
-    scheduleEventNotification(newEvent, 15) // По умолчанию за 15 минут
+    // Отправляем уведомления
+    await sendSmartNotification(
+      `✨ Новое событие: ${newEvent.title}`,
+      { body: `Создано: ${newEvent.description || 'Без описания'}` },
+      newEvent.type
+    )
 
     // Синхронизируем с партнером
     if (isPaired) {
       await syncData(newEvent, 'event')
+      await sendPairNotification('created', user?.first_name || 'Партнер')
     }
 
-    // Показываем уведомление о создании
-    showNotification('Событие создано', {
-      body: `"${newEvent.title}" добавлено в календарь`,
-      tag: `event-${newEvent.id}`
-    })
+    // Планируем напоминание
+    if (newEvent.reminder?.enabled && newEvent.reminder?.time) {
+      const reminderDelay = newEvent.reminder.time * 60 * 1000 // конвертируем в миллисекунды
+      const eventTime = new Date(newEvent.date).getTime()
+      const reminderTime = eventTime - reminderDelay
+      
+      if (reminderTime > Date.now()) {
+        setTimeout(async () => {
+          await sendSmartNotification(
+            `⏰ Напоминание: ${newEvent.title}`,
+            { body: `Начинается через ${newEvent.reminder.time} минут` },
+            'reminder'
+          )
+        }, reminderTime - Date.now())
+      }
+    }
+
+    showAlert('Событие создано!')
   }
 
+  // Обработка переключения события
   const toggleEvent = async (eventId) => {
-    setEvents(prev => prev.map(event => 
-      event.id === eventId 
-        ? { ...event, completed: !event.completed }
-        : event
-    ))
+    setEvents(prev => prev.map(event => {
+      if (event.id === eventId) {
+        const updatedEvent = { ...event, completed: !event.completed }
+        
+        // Отправляем уведомление
+        sendSmartNotification(
+          `${updatedEvent.completed ? '✅' : '🔄'} ${updatedEvent.completed ? 'Завершено' : 'Возобновлено'}: ${updatedEvent.title}`,
+          { body: updatedEvent.description || 'Без описания' },
+          updatedEvent.type
+        )
 
-    const updatedEvent = events.find(e => e.id === eventId)
-    if (updatedEvent && isPaired) {
-      await syncData({ ...updatedEvent, completed: !updatedEvent.completed }, 'event')
-    }
+        // Синхронизируем с партнером
+        if (isPaired) {
+          syncData(updatedEvent, 'event')
+        }
+
+        return updatedEvent
+      }
+      return event
+    }))
   }
 
+  // Обработка удаления события
   const deleteEvent = async (eventId) => {
-    setEvents(prev => prev.filter(event => event.id !== eventId))
+    const eventToDelete = events.find(e => e.id === eventId)
     
-    if (isPaired) {
-      await syncData({ id: eventId, action: 'delete' }, 'event')
-    }
-  }
-
-  const scheduleEventNotification = (event, minutesBefore) => {
-    const eventTime = new Date(event.date)
-    const notificationTime = new Date(eventTime.getTime() - minutesBefore * 60 * 1000)
-    const now = new Date()
-    
-    if (notificationTime > now) {
-      const delay = notificationTime.getTime() - now.getTime()
+    if (confirm(`Удалить событие "${eventToDelete.title}"?`)) {
+      setEvents(prev => prev.filter(event => event.id !== eventId))
       
-      scheduleNotification(
-        `Напоминание: ${event.title}`,
-        {
-          body: event.description || `Событие через ${minutesBefore} минут`,
-          tag: `reminder-${event.id}`,
-          requireInteraction: true
-        },
-        delay
+      // Отправляем уведомление
+      await sendSmartNotification(
+        `🗑️ Удалено: ${eventToDelete.title}`,
+        { body: 'Событие было удалено' },
+        'notification'
       )
-      
-      // Отмечаем, что уведомление запланировано
-      setEvents(prev => prev.map(e => 
-        e.id === event.id 
-          ? { ...e, notificationScheduled: true }
-          : e
-      ))
+
+      // Синхронизируем с партнером
+      if (isPaired) {
+        await syncData({ id: eventId, action: 'delete' }, 'event')
+      }
     }
   }
 
-  const handleEventClick = (event) => {
-    setSelectedEvent(event)
-    // Здесь можно показать детальную информацию о событии
+  // Обработка редактирования события
+  const editEvent = (event) => {
+    setEditingEvent(event)
+    setShowEventForm(true)
   }
 
-  const tabs = [
-    { id: 'calendar', label: 'Календарь', icon: Calendar },
-    { id: 'events', label: 'События', icon: CheckCircle },
-    { id: 'tasks', label: 'Задачи', icon: Clock }
-  ]
+  // Обработка обновления события
+  const updateEvent = async (eventData) => {
+    setEvents(prev => prev.map(event => {
+      if (event.id === editingEvent.id) {
+        const updatedEvent = { ...event, ...eventData, updatedAt: new Date().toISOString() }
+        
+        // Отправляем уведомление
+        sendSmartNotification(
+          `✏️ Обновлено: ${updatedEvent.title}`,
+          { body: updatedEvent.description || 'Без описания' },
+          updatedEvent.type
+        )
+
+        // Синхронизируем с партнером
+        if (isPaired) {
+          syncData(updatedEvent, 'event')
+        }
+
+        return updatedEvent
+      }
+      return event
+    }))
+
+    setShowEventForm(false)
+    setEditingEvent(null)
+    showAlert('Событие обновлено!')
+  }
+
+  // Проверяем просроченные задачи
+  useEffect(() => {
+    const checkOverdueTasks = () => {
+      const now = new Date()
+      const overdueTasks = events.filter(event => 
+        event.type === 'task' && 
+        !event.completed && 
+        new Date(event.date) < now
+      )
+
+      overdueTasks.forEach(task => {
+        sendSmartNotification(
+          `🚨 Просрочено: ${task.title}`,
+          { body: `Задача должна была быть выполнена ${format(new Date(task.date), 'dd.MM.yyyy')}` },
+          'overdue'
+        )
+      })
+    }
+
+    // Проверяем каждый час
+    const interval = setInterval(checkOverdueTasks, 60 * 60 * 1000)
+    checkOverdueTasks() // Проверяем сразу при загрузке
+
+    return () => clearInterval(interval)
+  }, [events, sendSmartNotification])
+
+  // Получаем текущий месяц
+  const currentDate = new Date()
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(currentDate)
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
+
+  // Фильтруем события для текущего месяца
+  const monthEvents = events.filter(event => 
+    isSameMonth(parseISO(event.date), currentDate)
+  )
+
+  // Группируем события по дням
+  const eventsByDay = monthEvents.reduce((acc, event) => {
+    const day = format(parseISO(event.date), 'yyyy-MM-dd')
+    if (!acc[day]) acc[day] = []
+    acc[day].push(event)
+    return acc
+  }, {})
 
   return (
-    <div className="min-h-screen bg-gray-50 telegram-app">
+    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
+      <Analytics />
+      
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo and Title */}
+            <div className="flex items-center">
               <button
-                onClick={() => setShowSidebar(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+                onClick={() => setShowMobileSidebar(true)}
+                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <Menu size={20} />
               </button>
               
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">DCalendar</h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600">Календарь для пар</p>
-                  {isPaired && (
-                    <div className="flex items-center gap-1 text-xs text-blue-600">
-                      <Users size={12} />
-                      <span>Подключен</span>
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-8 h-8 text-blue-600" />
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  DCalendar
+                </h1>
               </div>
             </div>
-            
+
+            {/* Header Actions */}
             <div className="flex items-center gap-2">
+              {/* Pair Status */}
+              {isPaired && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
+                  <Users size={16} />
+                  <span>В паре</span>
+                </div>
+              )}
+
+              {/* Pair Setup Button */}
+              <button
+                onClick={() => setShowPairSetup(true)}
+                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Настройка пары"
+              >
+                <Users size={20} />
+              </button>
+
+              {/* Telegram Bot Settings */}
+              <button
+                onClick={() => setShowTelegramSettings(true)}
+                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Настройки Telegram Bot"
+              >
+                <Bot size={20} />
+              </button>
+
+              {/* Notification Settings */}
               <button
                 onClick={() => setShowNotificationSettings(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Настройки уведомлений"
               >
                 <Bell size={20} />
-                {isPaired && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-                )}
               </button>
-              
+
+              {/* Add Event Button */}
               <button
                 onClick={() => setShowEventForm(true)}
                 className="btn-primary flex items-center gap-2"
               >
-                <Plus size={16} />
+                <Plus size={20} />
                 <span className="hidden sm:inline">Добавить</span>
               </button>
             </div>
@@ -183,15 +275,64 @@ function App() {
         </div>
       </header>
 
-      {/* Sidebar */}
-      {showSidebar && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden">
-          <div className="absolute left-0 top-0 h-full w-80 bg-white shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Меню</h2>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6">
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'calendar'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <Calendar size={16} className="inline mr-2" />
+            Календарь
+          </button>
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'list'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <List size={16} className="inline mr-2" />
+            Список
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'calendar' && (
+          <CalendarView
+            monthDays={monthDays}
+            eventsByDay={eventsByDay}
+            currentDate={currentDate}
+            onEventClick={editEvent}
+          />
+        )}
+
+        {activeTab === 'list' && (
+          <EventList
+            events={events}
+            onToggleEvent={toggleEvent}
+            onDeleteEvent={deleteEvent}
+            onEditEvent={editEvent}
+          />
+        )}
+      </main>
+
+      {/* Mobile Sidebar */}
+      {showMobileSidebar && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowMobileSidebar(false)} />
+          <div className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Меню</h2>
               <button
-                onClick={() => setShowSidebar(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setShowMobileSidebar(false)}
+                className="p-1 rounded-md text-gray-400 hover:text-gray-500"
               >
                 <X size={20} />
               </button>
@@ -201,149 +342,77 @@ function App() {
               <button
                 onClick={() => {
                   setShowPairSetup(true)
-                  setShowSidebar(false)
+                  setShowMobileSidebar(false)
                 }}
-                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                className="w-full btn-secondary flex items-center gap-2"
               >
-                <Users size={20} className="text-blue-600" />
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">Настройка пары</div>
-                  <div className="text-sm text-gray-600">
-                    {isPaired ? 'Подключен к партнеру' : 'Подключиться к партнеру'}
-                  </div>
-                </div>
+                <Users size={20} />
+                Настройка пары
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowTelegramSettings(true)
+                  setShowMobileSidebar(false)
+                }}
+                className="w-full btn-secondary flex items-center gap-2"
+              >
+                <Bot size={20} />
+                Telegram Bot
               </button>
               
               <button
                 onClick={() => {
                   setShowNotificationSettings(true)
-                  setShowSidebar(false)
+                  setShowMobileSidebar(false)
                 }}
-                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                className="w-full btn-secondary flex items-center gap-2"
               >
-                <Bell size={20} className="text-green-600" />
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">Уведомления</div>
-                  <div className="text-sm text-gray-600">Настройки уведомлений</div>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => {
-                  setShowSidebar(false)
-                }}
-                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <Settings size={20} className="text-gray-600" />
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">Настройки</div>
-                  <div className="text-sm text-gray-600">Общие настройки приложения</div>
-                </div>
+                <Bell size={20} />
+                Уведомления
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="flex-1 pb-20">
-        {activeTab === 'calendar' && (
-          <CalendarView 
-            events={events}
-            onEventClick={handleEventClick}
-          />
-        )}
-        
-        {activeTab === 'events' && (
-          <EventList 
-            events={events.filter(e => e.type === 'event')}
-            onToggle={toggleEvent}
-            onDelete={deleteEvent}
-          />
-        )}
-        
-        {activeTab === 'tasks' && (
-          <EventList 
-            events={events.filter(e => e.type === 'task')}
-            onToggle={toggleEvent}
-            onDelete={deleteEvent}
-          />
-        )}
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-10">
-        <div className="flex">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex flex-col items-center py-3 px-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'text-primary-600 bg-primary-50'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Icon size={20} />
-                <span className="text-xs mt-1">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </nav>
-
       {/* Modals */}
       {showEventForm && (
         <EventForm
-          onSubmit={addEvent}
-          onClose={() => setShowEventForm(false)}
+          onSubmit={editingEvent ? updateEvent : addEvent}
+          onClose={() => {
+            setShowEventForm(false)
+            setEditingEvent(null)
+          }}
+          event={editingEvent}
         />
       )}
 
       {showPairSetup && (
-        <PairSetup
-          onClose={() => setShowPairSetup(false)}
-        />
+        <PairSetup onClose={() => setShowPairSetup(false)} />
       )}
 
       {showNotificationSettings && (
-        <NotificationSettings
+        <NotificationSettings 
           onClose={() => setShowNotificationSettings(false)}
+          onOpenTelegramSettings={() => {
+            setShowNotificationSettings(false)
+            setShowTelegramSettings(true)
+          }}
         />
       )}
 
-      {/* Sync Status Indicator */}
-      {isPaired && syncStatus === 'syncing' && (
-        <div className="fixed top-20 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-40">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span className="text-sm">Синхронизация...</span>
-          </div>
-        </div>
+      {showTelegramSettings && (
+        <TelegramBotSettings onClose={() => setShowTelegramSettings(false)} />
       )}
 
-      {/* Quick Actions FAB */}
-      <div className="fixed bottom-24 right-4 z-10 lg:hidden">
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={() => setShowPairSetup(true)}
-            className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors"
-            title="Настройка пары"
-          >
-            <Users size={20} />
-          </button>
-          
-          <button
-            onClick={() => setShowNotificationSettings(true)}
-            className="w-12 h-12 bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-green-600 transition-colors"
-            title="Уведомления"
-          >
-            <Bell size={20} />
-          </button>
-        </div>
-      </div>
+      {/* Floating Action Button for Mobile */}
+      <button
+        onClick={() => setShowEventForm(true)}
+        className="fixed bottom-6 right-6 lg:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40"
+      >
+        <Plus size={24} />
+      </button>
     </div>
   )
 }
