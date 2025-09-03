@@ -103,6 +103,66 @@ function App() {
     }))
   }
 
+  // Слушаем обновления событий от партнера
+  useEffect(() => {
+    const handleEventsUpdated = (e) => {
+      if (e.detail && e.detail.events) {
+        setEvents(e.detail.events)
+      }
+    }
+
+    window.addEventListener('eventsUpdated', handleEventsUpdated)
+    
+    return () => {
+      window.removeEventListener('eventsUpdated', handleEventsUpdated)
+    }
+  }, [setEvents])
+
+  // Дополнительная проверка синхронизации при загрузке
+  useEffect(() => {
+    if (isPaired) {
+      // Проверяем, есть ли новые данные от партнера
+      const checkPartnerData = () => {
+        const partnerData = localStorage.getItem('partnerDataUpdated')
+        if (partnerData) {
+          try {
+            const updateData = JSON.parse(partnerData)
+            if (updateData.type === 'event' && updateData.timestamp > Date.now() - 60000) { // данные за последнюю минуту
+              // Обновляем события
+              const existingEvents = JSON.parse(localStorage.getItem('events') || '[]')
+              
+              if (updateData.data.action === 'delete') {
+                const updatedEvents = existingEvents.filter(event => event.id !== updateData.data.id)
+                setEvents(updatedEvents)
+                localStorage.setItem('events', JSON.stringify(updatedEvents))
+              } else {
+                const eventIndex = existingEvents.findIndex(event => event.id === updateData.data.id)
+                if (eventIndex !== -1) {
+                  existingEvents[eventIndex] = { ...existingEvents[eventIndex], ...updateData.data }
+                } else {
+                  existingEvents.push(updateData.data)
+                }
+                setEvents(existingEvents)
+                localStorage.setItem('events', JSON.stringify(existingEvents))
+              }
+              
+              // Очищаем данные партнера
+              localStorage.removeItem('partnerDataUpdated')
+            }
+          } catch (error) {
+            console.error('Ошибка проверки данных партнера:', error)
+          }
+        }
+      }
+
+      // Проверяем сразу и каждые 5 секунд
+      checkPartnerData()
+      const interval = setInterval(checkPartnerData, 5000)
+      
+      return () => clearInterval(interval)
+    }
+  }, [isPaired, setEvents])
+
   // Обработка удаления события
   const deleteEvent = async (eventId) => {
     const eventToDelete = events.find(e => e.id === eventId)
@@ -232,7 +292,7 @@ function App() {
       <Analytics />
       
              {/* Header */}
-       <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 header-safe-extra">
+       <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 header-safe-super">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Title */}

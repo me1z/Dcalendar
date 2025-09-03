@@ -113,16 +113,22 @@ export function usePairSync() {
         }
         
         // Уведомляем партнера о новых данных
-        localStorage.setItem('partnerDataUpdated', JSON.stringify({
+        const updateData = {
           type: 'event',
           data: data,
           timestamp: Date.now()
+        }
+        localStorage.setItem('partnerDataUpdated', JSON.stringify(updateData))
+        
+        // Отправляем событие для синхронизации в текущей вкладке
+        window.dispatchEvent(new CustomEvent('partnerDataUpdated', {
+          detail: updateData
         }))
         
-        // Отправляем событие для синхронизации
+        // Также отправляем StorageEvent для других вкладок
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'partnerDataUpdated',
-          newValue: localStorage.getItem('partnerDataUpdated')
+          newValue: JSON.stringify(updateData)
         }))
       }
       
@@ -239,8 +245,48 @@ export function usePairSync() {
       }
     }
 
+    // Слушаем CustomEvent для синхронизации в текущей вкладке
+    const handleCustomEvent = (e) => {
+      if (e.detail && e.detail.type === 'event' && isPaired) {
+        try {
+          const updateData = e.detail
+          // Обновляем события в localStorage
+          const existingEvents = JSON.parse(localStorage.getItem('events') || '[]')
+          
+          if (updateData.data.action === 'delete') {
+            // Удаляем событие
+            const updatedEvents = existingEvents.filter(event => event.id !== updateData.data.id)
+            localStorage.setItem('events', JSON.stringify(updatedEvents))
+          } else {
+            // Добавляем или обновляем событие
+            const eventIndex = existingEvents.findIndex(event => event.id === updateData.data.id)
+            if (eventIndex !== -1) {
+              // Обновляем существующее событие
+              existingEvents[eventIndex] = { ...existingEvents[eventIndex], ...updateData.data }
+            } else {
+              // Добавляем новое событие
+              existingEvents.push(updateData.data)
+            }
+            localStorage.setItem('events', JSON.stringify(existingEvents))
+          }
+          
+          // Уведомляем компоненты об обновлении
+          window.dispatchEvent(new CustomEvent('eventsUpdated', {
+            detail: { events: existingEvents }
+          }))
+        } catch (error) {
+          console.error('Ошибка обработки данных партнера:', error)
+        }
+      }
+    }
+
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener('partnerDataUpdated', handleCustomEvent)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('partnerDataUpdated', handleCustomEvent)
+    }
   }, [pairCode, partnerInfo, isPaired])
 
   return {
