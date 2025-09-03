@@ -5,30 +5,89 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
   
   body {
     @apply bg-gray-50 text-gray-900;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  /* Убираем скроллбар на мобильных */
+  @media (max-width: 768px) {
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 active:scale-95;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 active:scale-95;
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-4;
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-4 transition-all duration-200 hover:shadow-md;
   }
   
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  }
+
+  /* Мобильные кнопки */
+  .btn-mobile {
+    @apply touch-manipulation select-none;
+    min-height: 44px; /* Минимальная высота для touch */
+  }
+
+  /* Анимации для мобильных */
+  .mobile-tap {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+
+  /* Скрытие элементов на мобильных */
+  .mobile-hidden {
+    @apply hidden sm:block;
+  }
+
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+
+  /* Адаптивные отступы */
+  .mobile-padding {
+    @apply px-4 sm:px-6;
+  }
+
+  /* Адаптивные размеры текста */
+  .mobile-text {
+    @apply text-sm sm:text-base;
+  }
+
+  .mobile-title {
+    @apply text-lg sm:text-xl;
+  }
+
+  /* Адаптивная сетка */
+  .mobile-grid {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  /* Адаптивные модальные окна */
+  .mobile-modal {
+    @apply max-w-sm sm:max-w-md lg:max-w-lg;
   }
 }
 
@@ -41,4 +100,187 @@
 .telegram-button {
   background: var(--tg-theme-button-color, #2481cc);
   color: var(--tg-theme-button-text-color, #ffffff);
+}
+
+/* Кастомные скроллбары для десктопа */
+@media (min-width: 769px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+}
+
+/* Анимации для уведомлений */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.notification-slide-in {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.notification-slide-out {
+  animation: slideOutRight 0.3s ease-in;
+}
+
+/* Анимации для модальных окон */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.modal-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-fade-out {
+  animation: fadeOut 0.2s ease-in;
+}
+
+/* Адаптивные breakpoints */
+@media (max-width: 640px) {
+  .mobile-container {
+    @apply px-3;
+  }
+  
+  .mobile-text-small {
+    @apply text-xs;
+  }
+  
+  .mobile-button-small {
+    @apply py-1.5 px-3 text-sm;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-container {
+    @apply px-2;
+  }
+  
+  .mobile-grid-tight {
+    @apply gap-2;
+  }
+  
+  .mobile-padding-tight {
+    @apply p-2;
+  }
+}
+
+/* Темная тема поддержка */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-support {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+
+/* Улучшения для touch устройств */
+@media (hover: none) and (pointer: coarse) {
+  .touch-device {
+    @apply cursor-default;
+  }
+  
+  .touch-device button {
+    @apply cursor-default;
+  }
+  
+  .touch-device .hover\:bg-gray-100:hover {
+    @apply bg-transparent;
+  }
+  
+  .touch-device .hover\:bg-primary-700:hover {
+    @apply bg-primary-600;
+  }
+}
+
+/* Анимации для загрузки */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Анимации для синхронизации */
+@keyframes sync {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-sync {
+  animation: sync 1s linear infinite;
+}
+
+/* Стили для статуса подключения */
+.status-connected {
+  @apply text-green-600 bg-green-100;
+}
+
+.status-connecting {
+  @apply text-yellow-600 bg-yellow-100;
+}
+
+.status-error {
+  @apply text-red-600 bg-red-100;
+}
+
+.status-disconnected {
+  @apply text-gray-600 bg-gray-100;
 }
