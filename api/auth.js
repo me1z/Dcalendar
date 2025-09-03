@@ -16,6 +16,9 @@ export default async function handler(req, res) {
       // Логин через Telegram ID или тестовый режим
       const usersCollection = await getCollection('users');
       
+      // Определяем, является ли это тестовым режимом
+      const isTestMode = !telegramId || telegramId.startsWith('test_user_');
+      
       // Если нет telegramId, используем тестовый режим
       let actualTelegramId = telegramId;
       if (!actualTelegramId) {
@@ -28,12 +31,12 @@ export default async function handler(req, res) {
         // Создаем нового пользователя
         user = {
           telegramId: actualTelegramId,
-          name: name || 'Тестовый пользователь',
+          name: name || (isTestMode ? 'Тестовый пользователь' : 'Пользователь'),
           createdAt: new Date(),
           updatedAt: new Date(),
           pairCode: null,
           partnerId: null,
-          isTestUser: !telegramId // Помечаем тестовых пользователей
+          isTestUser: isTestMode // Помечаем тестовых пользователей
         };
         
         const result = await usersCollection.insertOne(user);

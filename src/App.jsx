@@ -29,17 +29,30 @@ function App() {
   const [editingEvent, setEditingEvent] = useState(null)
 
   const { sendNotification, sendPairNotification } = useNotifications()
-  const { user: telegramUser, theme, showAlert } = useTelegramApp()
+  const { user: telegramUser, theme, showAlert, tg } = useTelegramApp()
   const { user, login, testLogin, createPair, joinPair, logout } = useAuth()
   const { fetchEvents, createEvent: apiCreateEvent, updateEvent: apiUpdateEvent, deleteEvent: apiDeleteEvent, loading } = useEvents()
 
   // Авторизация через Telegram или тестовый режим при загрузке
   useEffect(() => {
     if (!user) {
-      if (telegramUser) {
+      // Проверяем, находимся ли мы в Telegram Web App
+      const isInTelegram = window.Telegram && window.Telegram.WebApp && telegramUser;
+      
+      console.log('🔍 Debug info:', {
+        hasTelegram: !!window.Telegram,
+        hasWebApp: !!(window.Telegram && window.Telegram.WebApp),
+        hasTelegramUser: !!telegramUser,
+        telegramUser: telegramUser,
+        isInTelegram
+      });
+      
+      if (isInTelegram) {
+        console.log('✅ В Telegram - логинимся через Telegram');
         // Если в Telegram - логинимся через Telegram
         login(telegramUser.id, telegramUser.first_name)
       } else {
+        console.log('🧪 Не в Telegram - выполняем тестовый логин');
         // Если не в Telegram - выполняем тестовый логин
         testLogin()
       }

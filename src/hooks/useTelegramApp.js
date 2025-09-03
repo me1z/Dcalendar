@@ -34,6 +34,8 @@ export function useTelegramApp() {
       
     } else {
       console.log('Запущено вне Telegram - режим разработки')
+      // Устанавливаем флаг, что мы не в Telegram
+      setUser(null)
     }
   }, [])
 

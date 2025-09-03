@@ -1,0 +1,31 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="96" cy="96" r="88" fill="#3b82f6"/>
+  
+  <!-- Calendar base -->
+  <rect x="48" y="64" width="96" height="80" rx="8" fill="white"/>
+  
+  <!-- Calendar header -->
+  <rect x="48" y="64" width="96" height="24" rx="8" fill="#1e40af"/>
+  
+  <!-- Calendar rings -->
+  <circle cx="72" cy="76" r="3" fill="white"/>
+  <circle cx="120" cy="76" r="3" fill="white"/>
+  
+  <!-- Calendar grid lines -->
+  <line x1="56" y1="96" x2="136" y2="96" stroke="#e5e7eb" stroke-width="2"/>
+  <line x1="56" y1="112" x2="136" y2="112" stroke="#e5e7eb" stroke-width="2"/>
+  <line x1="56" y1="128" x2="136" y2="128" stroke="#e5e7eb" stroke-width="2"/>
+  
+  <!-- Vertical grid lines -->
+  <line x1="72" y1="88" x2="72" y2="136" stroke="#e5e7eb" stroke-width="2"/>
+  <line x1="88" y1="88" x2="88" y2="136" stroke="#e5e7eb" stroke-width="2"/>
+  <line x1="104" y1="88" x2="104" y2="136" stroke="#e5e7eb" stroke-width="2"/>
+  <line x1="120" y1="88" x2="120" y2="136" stroke="#e5e7eb" stroke-width="2"/>
+  
+  <!-- Event dots -->
+  <circle cx="72" cy="104" r="2" fill="#10b981"/>
+  <circle cx="88" cy="120" r="2" fill="#f59e0b"/>
+  <circle cx="104" cy="104" r="2" fill="#ef4444"/>
+  <circle cx="120" cy="136" r="2" fill="#8b5cf6"/>
+</svg>
