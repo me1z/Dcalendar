@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Users, Clo
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
-function CalendarView({ events = [], onEventClick }) {
+function CalendarView({ events = [], onEventClick, onCreateEvent }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState('month') // month, week, day
   
@@ -206,6 +206,8 @@ function CalendarView({ events = [], onEventClick }) {
               className={`${getDayHeight()} p-1 border border-gray-100 transition-all duration-200 ${
                 viewMode === 'month' && !isCurrentMonth ? 'bg-gray-50' : 'bg-white'
               } ${isTodayDate ? 'ring-2 ring-primary-500 bg-primary-50' : ''}`}
+              onClick={() => onCreateEvent && onCreateEvent(day)}
+              style={{ cursor: onCreateEvent ? 'pointer' : 'default' }}
             >
               <div className={`text-sm font-medium mb-1 ${
                 viewMode === 'month' && !isCurrentMonth ? 'text-gray-400' : 'text-gray-900'

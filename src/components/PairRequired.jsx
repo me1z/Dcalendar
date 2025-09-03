@@ -2,8 +2,8 @@ import React from 'react'
 import { Users, Lock, Calendar, Heart } from 'lucide-react'
 
 function PairRequired({ onCreatePair }) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+     return (
+     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center safe-area-all">
       <div className="max-w-md w-full text-center">
         {/* Icon */}
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">

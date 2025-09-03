@@ -11,6 +11,7 @@ import { useTelegramApp } from './hooks/useTelegramApp'
 import EventForm from './components/EventForm'
 import CalendarView from './components/CalendarView'
 import EventList from './components/EventList'
+import EventView from './components/EventView'
 import PairSetup from './components/PairSetup'
 import PairRequired from './components/PairRequired'
 import NotificationSettings from './components/NotificationSettings'
@@ -21,9 +22,12 @@ function App() {
   const [events, setEvents] = useLocalStorage('events', [])
   const [activeTab, setActiveTab] = useState('calendar')
   const [showEventForm, setShowEventForm] = useState(false)
+  const [showEventView, setShowEventView] = useState(false)
   const [showPairSetup, setShowPairSetup] = useState(false)
   const [showNotificationSettings, setShowNotificationSettings] = useState(false)
   const [showProfileSettings, setShowProfileSettings] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedEvent, setSelectedEvent] = useState(null)
 
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
@@ -125,6 +129,18 @@ function App() {
     setShowEventForm(true)
   }
 
+  // Обработка просмотра события
+  const viewEvent = (event) => {
+    setSelectedEvent(event)
+    setShowEventView(true)
+  }
+
+  // Обработка создания события на определенную дату
+  const createEventOnDate = (date) => {
+    setSelectedDate(date)
+    setShowEventForm(true)
+  }
+
   // Обработка обновления события
   const updateEvent = async (eventData) => {
     setEvents(prev => prev.map(event => {
@@ -215,8 +231,8 @@ function App() {
     <div className={`min-h-screen iphone-no-scroll ${theme === 'dark' ? 'dark' : ''}`}>
       <Analytics />
       
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
+             {/* Header */}
+       <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 header-safe">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Title */}
@@ -289,8 +305,8 @@ function App() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
+             {/* Main Content */}
+       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 main-safe">
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6">
           <button
@@ -318,12 +334,13 @@ function App() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'calendar' && (
-          <CalendarView
-            events={events}
-            onEventClick={editEvent}
-          />
-        )}
+                 {activeTab === 'calendar' && (
+           <CalendarView
+             events={events}
+             onEventClick={viewEvent}
+             onCreateEvent={createEventOnDate}
+           />
+         )}
 
         {activeTab === 'list' && (
           <EventList
@@ -390,16 +407,34 @@ function App() {
       )}
 
       {/* Modals */}
-      {showEventForm && (
-        <EventForm
-          onSubmit={editingEvent ? updateEvent : addEvent}
-          onClose={() => {
-            setShowEventForm(false)
-            setEditingEvent(null)
-          }}
-          event={editingEvent}
-        />
-      )}
+             {showEventForm && (
+         <EventForm
+           onSubmit={editingEvent ? updateEvent : addEvent}
+           onClose={() => {
+             setShowEventForm(false)
+             setEditingEvent(null)
+             setSelectedDate(null)
+           }}
+           event={editingEvent}
+           selectedDate={selectedDate}
+         />
+       )}
+
+       {showEventView && selectedEvent && (
+         <EventView
+           event={selectedEvent}
+           onClose={() => {
+             setShowEventView(false)
+             setSelectedEvent(null)
+           }}
+           onToggle={toggleEvent}
+           onEdit={(event) => {
+             setShowEventView(false)
+             setSelectedEvent(null)
+             editEvent(event)
+           }}
+         />
+       )}
 
       {showPairSetup && (
         <PairSetup onClose={() => setShowPairSetup(false)} />
@@ -419,11 +454,11 @@ function App() {
 
 
 
-      {/* Floating Action Button for Mobile */}
-      <button
-        onClick={() => setShowEventForm(true)}
-        className="fixed bottom-6 right-6 lg:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40"
-      >
+             {/* Floating Action Button for Mobile */}
+       <button
+         onClick={() => setShowEventForm(true)}
+         className="fixed lg:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40 float-safe"
+       >
         <Plus size={24} />
       </button>
 
