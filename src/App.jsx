@@ -6,7 +6,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useNotifications } from './hooks/useNotifications'
 import { usePairSync } from './hooks/usePairSync'
-import { useTelegramBot } from './hooks/useTelegramBot'
+
 import { useTelegramApp } from './hooks/useTelegramApp'
 import EventForm from './components/EventForm'
 import CalendarView from './components/CalendarView'
@@ -25,7 +25,7 @@ function App() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
 
-  const { sendNotification, sendEventNotification, sendPairNotification } = useNotifications()
+  const { sendNotification, sendPairNotification } = useNotifications()
   const { isPaired, syncData } = usePairSync()
   const { user, theme, showAlert } = useTelegramApp()
 
