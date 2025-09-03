@@ -69,7 +69,7 @@ export default async function handler(req, res) {
         const pairCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         
         await usersCollection.updateOne(
-          { _id: new ObjectId(decoded.userId) },
+          { _id: new MongoClient.ObjectId(decoded.userId) },
           { $set: { pairCode, updatedAt: new Date() } }
         );
 
