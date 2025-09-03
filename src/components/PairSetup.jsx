@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Users, Copy, Check, X, Link, UserPlus, Info, Trash2, AlertCircle } from 'lucide-react'
-import { usePairSync } from '../hooks/usePairSync'
+import { useAuth } from '../hooks/useApi'
 
 function PairSetup({ onClose, onPairCreated }) {
   const [mode, setMode] = useState('menu') // menu, create, join, info
@@ -10,37 +10,26 @@ function PairSetup({ onClose, onPairCreated }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
   const {
-    pairCode,
-    isPaired,
-    partnerInfo,
-    syncStatus,
-    generatePairCode,
-    connectToPair,
-    disconnectFromPair,
-    notifyPartnerConnected
-  } = usePairSync()
+    user,
+    createPair,
+    joinPair,
+    logout
+  } = useAuth()
 
-  const handleCreatePair = () => {
-    generatePairCode()
-    setMode('create')
-    
-    // Запускаем проверку подключения партнера
-    const checkPartnerConnection = setInterval(() => {
-      if (isPaired && partnerInfo) {
-        clearInterval(checkPartnerConnection)
-        // Партнер подключился, закрываем модальное окно
-        if (onPairCreated) {
-          onPairCreated()
-        } else {
-          onClose()
-        }
-      }
-    }, 1000)
-    
-    // Останавливаем проверку через 5 минут
-    setTimeout(() => {
-      clearInterval(checkPartnerConnection)
-    }, 5 * 60 * 1000)
+  const [pairCode, setPairCode] = useState('')
+  const [partnerInfo, setPartnerInfo] = useState(null)
+  const [syncStatus, setSyncStatus] = useState('disconnected')
+
+  const handleCreatePair = async () => {
+    try {
+      const code = await createPair()
+      setPairCode(code)
+      setMode('create')
+      setSyncStatus('waiting')
+    } catch (error) {
+      console.error('Failed to create pair:', error)
+      alert('Ошибка при создании пары')
+    }
   }
 
   const handleJoinPair = () => {
@@ -56,10 +45,22 @@ function PairSetup({ onClose, onPairCreated }) {
     
     setIsConnecting(true)
     try {
-      await connectToPair(joinCode.trim())
+      const partner = await joinPair(joinCode.trim())
+      setPartnerInfo(partner)
+      setSyncStatus('connected')
       setMode('success')
+      
+      // Закрываем модальное окно через 2 секунды
+      setTimeout(() => {
+        if (onPairCreated) {
+          onPairCreated()
+        } else {
+          onClose()
+        }
+      }, 2000)
     } catch (error) {
-      alert(error.message)
+      console.error('Failed to join pair:', error)
+      alert('Ошибка при подключении к паре')
     } finally {
       setIsConnecting(false)
     }
@@ -80,9 +81,12 @@ function PairSetup({ onClose, onPairCreated }) {
   }
 
   const confirmDisconnect = () => {
-    disconnectFromPair()
+    logout()
     setShowDeleteConfirm(false)
     setMode('menu')
+    setSyncStatus('disconnected')
+    setPartnerInfo(null)
+    setPairCode('')
   }
 
   const getStatusColor = () => {
@@ -188,7 +192,7 @@ function PairSetup({ onClose, onPairCreated }) {
         <div className="p-4">
           {mode === 'menu' && (
             <div className="space-y-4">
-              {isPaired ? (
+              {user?.partnerId ? (
                 <div className="space-y-4">
                   <div className="text-center py-4">
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">

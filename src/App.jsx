@@ -3,10 +3,9 @@ import { Calendar, Plus, List, Settings, Users, Bell, Menu, X } from 'lucide-rea
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Analytics } from '@vercel/analytics/react'
-import { useLocalStorage } from './hooks/useLocalStorage'
 import { useNotifications } from './hooks/useNotifications'
-import { usePairSync } from './hooks/usePairSync'
 import { useTelegramApp } from './hooks/useTelegramApp'
+import { useAuth, useEvents } from './hooks/useApi'
 import EventForm from './components/EventForm'
 import CalendarView from './components/CalendarView'
 import EventList from './components/EventList'
@@ -17,7 +16,7 @@ import NotificationSettings from './components/NotificationSettings'
 import ProfileSettings from './components/ProfileSettings'
 
 function App() {
-  const [events, setEvents] = useLocalStorage('events', [])
+  const [events, setEvents] = useState([])
   const [activeTab, setActiveTab] = useState('calendar')
   const [showEventForm, setShowEventForm] = useState(false)
   const [showEventView, setShowEventView] = useState(false)
@@ -30,75 +29,105 @@ function App() {
   const [editingEvent, setEditingEvent] = useState(null)
 
   const { sendNotification, sendPairNotification } = useNotifications()
-  const { isPaired, syncData } = usePairSync()
-  const { user, theme, showAlert } = useTelegramApp()
+  const { user: telegramUser, theme, showAlert } = useTelegramApp()
+  const { user, login, createPair, joinPair, logout } = useAuth()
+  const { fetchEvents, createEvent: apiCreateEvent, updateEvent: apiUpdateEvent, deleteEvent: apiDeleteEvent, loading } = useEvents()
+
+  // Авторизация через Telegram при загрузке
+  useEffect(() => {
+    if (telegramUser && !user) {
+      login(telegramUser.id, telegramUser.first_name)
+    }
+  }, [telegramUser, user, login])
+
+  // Загрузка событий при авторизации
+  useEffect(() => {
+    if (user) {
+      loadEvents()
+    }
+  }, [user])
+
+  const loadEvents = async () => {
+    try {
+      const eventsData = await fetchEvents()
+      setEvents(eventsData)
+    } catch (error) {
+      console.error('Failed to load events:', error)
+    }
+  }
 
   // Обработка добавления события
   const addEvent = async (eventData) => {
-    const newEvent = {
-      ...eventData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      completed: false,
-      assignedTo: eventData.assignedTo || 'both'
-    }
+    try {
+      const newEvent = await apiCreateEvent({
+        ...eventData,
+        completed: false,
+        assignedTo: eventData.assignedTo || 'both'
+      })
 
-    setEvents(prev => [...prev, newEvent])
-    setShowEventForm(false)
-    setEditingEvent(null)
+      setEvents(prev => [...prev, newEvent])
+      setShowEventForm(false)
+      setEditingEvent(null)
 
-    // Отправляем уведомления
-    await sendNotification(
-      `✨ Новое событие: ${newEvent.title}`,
-      { body: `Создано: ${newEvent.description || 'Без описания'}` }
-    )
+      // Отправляем уведомления
+      await sendNotification(
+        `✨ Новое событие: ${newEvent.title}`,
+        { body: `Создано: ${newEvent.description || 'Без описания'}` }
+      )
 
-    // Синхронизируем с партнером
-    if (isPaired) {
-      await syncData(newEvent, 'event')
-      await sendPairNotification('created', user?.first_name || 'Партнер')
-    }
-
-    // Планируем напоминание
-    if (newEvent.reminder?.enabled && newEvent.reminder?.time) {
-      const reminderDelay = newEvent.reminder.time * 60 * 1000 // конвертируем в миллисекунды
-      const eventTime = new Date(newEvent.date).getTime()
-      const reminderTime = eventTime - reminderDelay
-      
-      if (reminderTime > Date.now()) {
-        setTimeout(async () => {
-          await sendNotification(
-            `⏰ Напоминание: ${newEvent.title}`,
-            { body: `Начинается через ${newEvent.reminder.time} минут` }
-          )
-        }, reminderTime - Date.now())
+      // Уведомляем партнера
+      if (user?.partnerId) {
+        await sendPairNotification('created', user?.name || 'Партнер')
       }
-    }
 
-    showAlert('Событие создано!')
+      // Планируем напоминание
+      if (newEvent.reminder?.enabled && newEvent.reminder?.time) {
+        const reminderDelay = newEvent.reminder.time * 60 * 1000
+        const eventTime = new Date(newEvent.date).getTime()
+        const reminderTime = eventTime - reminderDelay
+        
+        if (reminderTime > Date.now()) {
+          setTimeout(async () => {
+            await sendNotification(
+              `⏰ Напоминание: ${newEvent.title}`,
+              { body: `Начинается через ${newEvent.reminder.time} минут` }
+            )
+          }, reminderTime - Date.now())
+        }
+      }
+
+      showAlert('Событие создано!')
+    } catch (error) {
+      showAlert('Ошибка при создании события')
+      console.error('Create event error:', error)
+    }
   }
 
   // Обработка переключения события
   const toggleEvent = async (eventId) => {
-    setEvents(prev => prev.map(event => {
-      if (event.id === eventId) {
-        const updatedEvent = { ...event, completed: !event.completed }
-        
-        // Отправляем уведомление
-        sendNotification(
-          `${updatedEvent.completed ? '✅' : '🔄'} ${updatedEvent.completed ? 'Завершено' : 'Возобновлено'}: ${updatedEvent.title}`,
-          { body: updatedEvent.description || 'Без описания' }
-        )
+    try {
+      const event = events.find(e => e._id === eventId || e.id === eventId)
+      if (!event) return
 
-        // Синхронизируем с партнером
-        if (isPaired) {
-          syncData(updatedEvent, 'event')
-        }
-
-        return updatedEvent
-      }
-      return event
-    }))
+      const updatedEvent = { ...event, completed: !event.completed }
+      
+      // Обновляем в API
+      await apiUpdateEvent(event._id || event.id, updatedEvent)
+      
+      // Обновляем локальное состояние
+      setEvents(prev => prev.map(e => 
+        (e._id === eventId || e.id === eventId) ? updatedEvent : e
+      ))
+      
+      // Отправляем уведомление
+      sendNotification(
+        `${updatedEvent.completed ? '✅' : '🔄'} ${updatedEvent.completed ? 'Завершено' : 'Возобновлено'}: ${updatedEvent.title}`,
+        { body: updatedEvent.description || 'Без описания' }
+      )
+    } catch (error) {
+      console.error('Toggle event error:', error)
+      showAlert('Ошибка при обновлении события')
+    }
   }
 
   // Слушаем обновления событий от партнера
@@ -116,68 +145,30 @@ function App() {
     }
   }, [setEvents])
 
-  // Дополнительная проверка синхронизации при загрузке
-  useEffect(() => {
-    if (isPaired) {
-      // Проверяем, есть ли новые данные от партнера
-      const checkPartnerData = () => {
-        const partnerData = localStorage.getItem('partnerDataUpdated')
-        if (partnerData) {
-          try {
-            const updateData = JSON.parse(partnerData)
-            if (updateData.type === 'event' && updateData.timestamp > Date.now() - 60000) { // данные за последнюю минуту
-              // Обновляем события
-              const existingEvents = JSON.parse(localStorage.getItem('events') || '[]')
-              
-              if (updateData.data.action === 'delete') {
-                const updatedEvents = existingEvents.filter(event => event.id !== updateData.data.id)
-                setEvents(updatedEvents)
-                localStorage.setItem('events', JSON.stringify(updatedEvents))
-              } else {
-                const eventIndex = existingEvents.findIndex(event => event.id === updateData.data.id)
-                if (eventIndex !== -1) {
-                  existingEvents[eventIndex] = { ...existingEvents[eventIndex], ...updateData.data }
-                } else {
-                  existingEvents.push(updateData.data)
-                }
-                setEvents(existingEvents)
-                localStorage.setItem('events', JSON.stringify(existingEvents))
-              }
-              
-              // Очищаем данные партнера
-              localStorage.removeItem('partnerDataUpdated')
-            }
-          } catch (error) {
-            console.error('Ошибка проверки данных партнера:', error)
-          }
-        }
-      }
 
-      // Проверяем сразу и каждые 5 секунд
-      checkPartnerData()
-      const interval = setInterval(checkPartnerData, 5000)
-      
-      return () => clearInterval(interval)
-    }
-  }, [isPaired, setEvents])
 
   // Обработка удаления события
   const deleteEvent = async (eventId) => {
-    const eventToDelete = events.find(e => e.id === eventId)
-    
-    if (confirm(`Удалить событие "${eventToDelete.title}"?`)) {
-      setEvents(prev => prev.filter(event => event.id !== eventId))
+    try {
+      const eventToDelete = events.find(e => e._id === eventId || e.id === eventId)
+      if (!eventToDelete) return
       
-      // Отправляем уведомление
-      await sendNotification(
-        `🗑️ Удалено: ${eventToDelete.title}`,
-        { body: 'Событие было удалено' }
-      )
-
-      // Синхронизируем с партнером
-      if (isPaired) {
-        await syncData({ id: eventId, action: 'delete' }, 'event')
+      if (confirm(`Удалить событие "${eventToDelete.title}"?`)) {
+        // Удаляем из API
+        await apiDeleteEvent(eventToDelete._id || eventToDelete.id)
+        
+        // Удаляем из локального состояния
+        setEvents(prev => prev.filter(event => (event._id !== eventId && event.id !== eventId)))
+        
+        // Отправляем уведомление
+        await sendNotification(
+          `🗑️ Удалено: ${eventToDelete.title}`,
+          { body: 'Событие было удалено' }
+        )
       }
+    } catch (error) {
+      console.error('Delete event error:', error)
+      showAlert('Ошибка при удалении события')
     }
   }
 
@@ -201,29 +192,30 @@ function App() {
 
   // Обработка обновления события
   const updateEvent = async (eventData) => {
-    setEvents(prev => prev.map(event => {
-      if (event.id === editingEvent.id) {
-        const updatedEvent = { ...event, ...eventData, updatedAt: new Date().toISOString() }
-        
-        // Отправляем уведомление
-        sendNotification(
-          `✏️ Обновлено: ${updatedEvent.title}`,
-          { body: updatedEvent.description || 'Без описания' }
-        )
+    try {
+      const updatedEvent = { ...editingEvent, ...eventData, updatedAt: new Date().toISOString() }
+      
+      // Обновляем в API
+      await apiUpdateEvent(editingEvent._id || editingEvent.id, updatedEvent)
+      
+      // Обновляем локальное состояние
+      setEvents(prev => prev.map(event => 
+        (event._id === editingEvent._id || event.id === editingEvent.id) ? updatedEvent : event
+      ))
+      
+      // Отправляем уведомление
+      sendNotification(
+        `✏️ Обновлено: ${updatedEvent.title}`,
+        { body: updatedEvent.description || 'Без описания' }
+      )
 
-        // Синхронизируем с партнером
-        if (isPaired) {
-          syncData(updatedEvent, 'event')
-        }
-
-        return updatedEvent
-      }
-      return event
-    }))
-
-    setShowEventForm(false)
-    setEditingEvent(null)
-    showAlert('Событие обновлено!')
+      setShowEventForm(false)
+      setEditingEvent(null)
+      showAlert('Событие обновлено!')
+    } catch (error) {
+      console.error('Update event error:', error)
+      showAlert('Ошибка при обновлении события')
+    }
   }
 
   // Проверяем просроченные задачи
@@ -252,7 +244,7 @@ function App() {
   }, [events, sendNotification])
 
   // Если нет пары, показываем экран создания пары
-  if (!isPaired) {
+  if (!user?.partnerId) {
     return (
       <div className={`min-h-screen iphone-no-scroll ${theme === 'dark' ? 'dark' : ''}`}>
         <Analytics />
@@ -301,7 +293,7 @@ function App() {
             {/* Header Actions */}
             <div className="flex items-center gap-2">
               {/* Pair Status */}
-              {isPaired && (
+              {user?.partnerId && (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
                   <Users size={16} />
                   <span>В паре</span>
