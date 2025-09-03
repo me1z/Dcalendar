@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Plus, List, Settings, Users, Bell, Menu, X, Bot } from 'lucide-react'
+import { Calendar, Plus, List, Settings, Users, Bell, Menu, X } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { Analytics } from '@vercel/analytics/react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useNotifications } from './hooks/useNotifications'
 import { usePairSync } from './hooks/usePairSync'
@@ -12,8 +13,7 @@ import CalendarView from './components/CalendarView'
 import EventList from './components/EventList'
 import PairSetup from './components/PairSetup'
 import NotificationSettings from './components/NotificationSettings'
-import TelegramBotSettings from './components/TelegramBotSettings'
-import { Analytics } from '@vercel/analytics/react'
+
 
 function App() {
   const [events, setEvents] = useLocalStorage('events', [])
@@ -21,13 +21,12 @@ function App() {
   const [showEventForm, setShowEventForm] = useState(false)
   const [showPairSetup, setShowPairSetup] = useState(false)
   const [showNotificationSettings, setShowNotificationSettings] = useState(false)
-  const [showTelegramSettings, setShowTelegramSettings] = useState(false)
+
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
 
-  const { sendSmartNotification } = useNotifications()
+  const { sendNotification, sendEventNotification, sendPairNotification } = useNotifications()
   const { isPaired, syncData } = usePairSync()
-  const { sendEventNotification, sendPairNotification } = useTelegramBot()
   const { user, theme, showAlert } = useTelegramApp()
 
   // Обработка добавления события
@@ -44,10 +43,9 @@ function App() {
     setEditingEvent(null)
 
     // Отправляем уведомления
-    await sendSmartNotification(
+    await sendNotification(
       `✨ Новое событие: ${newEvent.title}`,
-      { body: `Создано: ${newEvent.description || 'Без описания'}` },
-      newEvent.type
+      { body: `Создано: ${newEvent.description || 'Без описания'}` }
     )
 
     // Синхронизируем с партнером
@@ -64,10 +62,9 @@ function App() {
       
       if (reminderTime > Date.now()) {
         setTimeout(async () => {
-          await sendSmartNotification(
+          await sendNotification(
             `⏰ Напоминание: ${newEvent.title}`,
-            { body: `Начинается через ${newEvent.reminder.time} минут` },
-            'reminder'
+            { body: `Начинается через ${newEvent.reminder.time} минут` }
           )
         }, reminderTime - Date.now())
       }
@@ -83,10 +80,9 @@ function App() {
         const updatedEvent = { ...event, completed: !event.completed }
         
         // Отправляем уведомление
-        sendSmartNotification(
+        sendNotification(
           `${updatedEvent.completed ? '✅' : '🔄'} ${updatedEvent.completed ? 'Завершено' : 'Возобновлено'}: ${updatedEvent.title}`,
-          { body: updatedEvent.description || 'Без описания' },
-          updatedEvent.type
+          { body: updatedEvent.description || 'Без описания' }
         )
 
         // Синхронизируем с партнером
@@ -108,10 +104,9 @@ function App() {
       setEvents(prev => prev.filter(event => event.id !== eventId))
       
       // Отправляем уведомление
-      await sendSmartNotification(
+      await sendNotification(
         `🗑️ Удалено: ${eventToDelete.title}`,
-        { body: 'Событие было удалено' },
-        'notification'
+        { body: 'Событие было удалено' }
       )
 
       // Синхронизируем с партнером
@@ -134,10 +129,9 @@ function App() {
         const updatedEvent = { ...event, ...eventData, updatedAt: new Date().toISOString() }
         
         // Отправляем уведомление
-        sendSmartNotification(
+        sendNotification(
           `✏️ Обновлено: ${updatedEvent.title}`,
-          { body: updatedEvent.description || 'Без описания' },
-          updatedEvent.type
+          { body: updatedEvent.description || 'Без описания' }
         )
 
         // Синхронизируем с партнером
@@ -166,10 +160,9 @@ function App() {
       )
 
       overdueTasks.forEach(task => {
-        sendSmartNotification(
+        sendNotification(
           `🚨 Просрочено: ${task.title}`,
-          { body: `Задача должна была быть выполнена ${format(new Date(task.date), 'dd.MM.yyyy')}` },
-          'overdue'
+          { body: `Задача должна была быть выполнена ${format(new Date(task.date), 'dd.MM.yyyy')}` }
         )
       })
     }
@@ -179,7 +172,7 @@ function App() {
     checkOverdueTasks() // Проверяем сразу при загрузке
 
     return () => clearInterval(interval)
-  }, [events, sendSmartNotification])
+  }, [events, sendNotification])
 
   // Получаем текущий месяц
   const currentDate = new Date()
@@ -244,14 +237,7 @@ function App() {
                 <Users size={20} />
               </button>
 
-              {/* Telegram Bot Settings */}
-              <button
-                onClick={() => setShowTelegramSettings(true)}
-                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                title="Настройки Telegram Bot"
-              >
-                <Bot size={20} />
-              </button>
+              
 
               {/* Notification Settings */}
               <button
@@ -350,16 +336,7 @@ function App() {
                 Настройка пары
               </button>
               
-              <button
-                onClick={() => {
-                  setShowTelegramSettings(true)
-                  setShowMobileSidebar(false)
-                }}
-                className="w-full btn-secondary flex items-center gap-2"
-              >
-                <Bot size={20} />
-                Telegram Bot
-              </button>
+
               
               <button
                 onClick={() => {
@@ -393,18 +370,12 @@ function App() {
       )}
 
       {showNotificationSettings && (
-        <NotificationSettings 
-          onClose={() => setShowNotificationSettings(false)}
-          onOpenTelegramSettings={() => {
-            setShowNotificationSettings(false)
-            setShowTelegramSettings(true)
-          }}
-        />
+                  <NotificationSettings 
+            onClose={() => setShowNotificationSettings(false)}
+          />
       )}
 
-      {showTelegramSettings && (
-        <TelegramBotSettings onClose={() => setShowTelegramSettings(false)} />
-      )}
+
 
       {/* Floating Action Button for Mobile */}
       <button
@@ -413,6 +384,9 @@ function App() {
       >
         <Plus size={24} />
       </button>
+
+      {/* Vercel Analytics */}
+      <Analytics />
     </div>
   )
 }

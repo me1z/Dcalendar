@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Bell, X, Clock, Calendar, CheckCircle, AlertCircle, Bot } from 'lucide-react'
+import { Bell, X, Clock, Calendar, CheckCircle, AlertCircle, Smartphone } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 
-function NotificationSettings({ onClose, onOpenTelegramSettings }) {
+function NotificationSettings({ onClose }) {
   const [settings, setSettings] = useState({
     browser: true,
-    telegram: false,
+    telegram: true,
     events: true,
     tasks: true,
     reminders: true,
@@ -22,6 +22,7 @@ function NotificationSettings({ onClose, onOpenTelegramSettings }) {
   const {
     isSupported,
     permission,
+    telegramSupported,
     requestPermission,
     updateSettings: updateNotificationSettings
   } = useNotifications()
@@ -30,318 +31,240 @@ function NotificationSettings({ onClose, onOpenTelegramSettings }) {
     // Загружаем настройки
     const savedSettings = localStorage.getItem('notificationSettings')
     if (savedSettings) {
-      setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }))
+      try {
+        setSettings(JSON.parse(savedSettings))
+      } catch (error) {
+        console.error('Ошибка загрузки настроек уведомлений:', error)
+      }
     }
   }, [])
 
   const handleSettingChange = (key, value) => {
-    const newSettings = { ...settings, [key]: value }
-    setSettings(newSettings)
-    updateNotificationSettings(newSettings)
-  }
-
-  const handleQuietHoursChange = (key, value) => {
-    const newSettings = {
-      ...settings,
-      quietHours: { ...settings.quietHours, [key]: value }
+    const newSettings = { ...settings }
+    
+    if (key.includes('.')) {
+      const [parent, child] = key.split('.')
+      newSettings[parent] = { ...newSettings[parent], [child]: value }
+    } else {
+      newSettings[key] = value
     }
+    
     setSettings(newSettings)
     updateNotificationSettings(newSettings)
   }
 
   const handleRequestPermission = async () => {
-    const granted = await requestPermission()
-    if (granted) {
-      alert('Разрешение на уведомления получено!')
-    } else {
-      alert('Разрешение на уведомления не получено. Проверьте настройки браузера.')
-    }
+    await requestPermission()
   }
 
-  const getPermissionStatus = () => {
-    if (!isSupported) return 'not-supported'
-    return permission
+  const getStatusIcon = () => {
+    if (permission === 'granted') return <CheckCircle className="text-green-500" size={16} />
+    if (permission === 'denied') return <AlertCircle className="text-red-500" size={16} />
+    return <AlertCircle className="text-yellow-500" size={16} />
   }
 
-  const getPermissionColor = (status) => {
-    switch (status) {
-      case 'granted': return 'text-green-600'
-      case 'denied': return 'text-red-600'
-      case 'default': return 'text-yellow-600'
-      default: return 'text-gray-400'
-    }
-  }
-
-  const getPermissionLabel = (status) => {
-    switch (status) {
-      case 'granted': return 'Разрешено'
-      case 'denied': return 'Запрещено'
-      case 'default': return 'Не запрошено'
-      default: return 'Не поддерживается'
-    }
+  const getStatusText = () => {
+    if (permission === 'granted') return 'Разрешено'
+    if (permission === 'denied') return 'Заблокировано'
+    return 'Не запрошено'
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Bell size={20} />
             Настройки уведомлений
           </h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
             <X size={20} />
           </button>
         </div>
 
         <div className="p-4 space-y-6">
-          {/* Permission Status */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          {/* Browser Notifications Status */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-900">Статус разрешений</h3>
-              <span className={`text-sm font-medium ${getPermissionColor(getPermissionStatus())}`}>
-                {getPermissionLabel(getPermissionStatus())}
+              <h3 className="font-medium text-gray-900 dark:text-white">Браузерные уведомления</h3>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                {getStatusIcon()}
+                {getStatusText()}
               </span>
             </div>
             
-            {getPermissionStatus() === 'default' && (
+            {permission !== 'granted' && (
               <button
                 onClick={handleRequestPermission}
-                className="btn-primary w-full"
+                className="btn-secondary w-full text-sm"
               >
                 Запросить разрешение
               </button>
             )}
+          </div>
+
+          {/* Telegram Notifications Status */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Smartphone size={16} />
+                Telegram уведомления
+              </h3>
+              <span className={`text-sm font-medium ${telegramSupported ? 'text-green-600' : 'text-gray-400'}`}>
+                {telegramSupported ? 'Доступно' : 'Недоступно'}
+              </span>
+            </div>
             
-            {getPermissionStatus() === 'denied' && (
-              <p className="text-sm text-red-600">
-                Разрешение запрещено. Измените настройки браузера, чтобы получать уведомления.
+            {telegramSupported ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Уведомления будут показываться прямо в Telegram
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                Приложение должно быть запущено в Telegram
               </p>
             )}
           </div>
 
-          {/* Notification Channels */}
+          {/* Notification Types */}
           <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">Каналы уведомлений</h3>
+            <h3 className="font-medium text-gray-900 dark:text-white">Типы уведомлений</h3>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell size={20} className="text-gray-600" />
-                <div>
-                  <div className="font-medium text-gray-900">Браузер</div>
-                  <div className="text-sm text-gray-600">Push-уведомления в браузере</div>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.browser}
-                  onChange={(e) => handleSettingChange('browser', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bot size={20} className="text-gray-600" />
-                <div>
-                  <div className="font-medium text-gray-900">Telegram</div>
-                  <div className="text-sm text-gray-600">Уведомления в Telegram</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings.telegram}
-                    onChange={(e) => handleSettingChange('telegram', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                </label>
-                <button
-                  onClick={onOpenTelegramSettings}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  Настроить
-                </button>
-              </div>
-            </div>
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">События</span>
+              <input
+                type="checkbox"
+                checked={settings.events}
+                onChange={(e) => handleSettingChange('events', e.target.checked)}
+                className="toggle"
+              />
+            </label>
+            
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Задачи</span>
+              <input
+                type="checkbox"
+                checked={settings.tasks}
+                onChange={(e) => handleSettingChange('tasks', e.target.checked)}
+                className="toggle"
+              />
+            </label>
+            
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Напоминания</span>
+              <input
+                type="checkbox"
+                checked={settings.reminders}
+                onChange={(e) => handleSettingChange('reminders', e.target.checked)}
+                className="toggle"
+              />
+            </label>
           </div>
 
-          {/* General Settings */}
+          {/* Notification Channels */}
           <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">Общие настройки</h3>
+            <h3 className="font-medium text-gray-900 dark:text-white">Каналы уведомлений</h3>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar size={20} className="text-gray-600" />
-                <div>
-                  <div className="font-medium text-gray-900">События</div>
-                  <div className="text-sm text-gray-600">Уведомления о событиях</div>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.events}
-                  onChange={(e) => handleSettingChange('events', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CheckCircle size={20} className="text-gray-600" />
-                <div>
-                  <div className="font-medium text-gray-900">Задачи</div>
-                  <div className="text-sm text-gray-600">Уведомления о задачах</div>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.tasks}
-                  onChange={(e) => handleSettingChange('tasks', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock size={20} className="text-gray-600" />
-                <div>
-                  <div className="font-medium text-gray-900">Напоминания</div>
-                  <div className="text-sm text-gray-600">Напоминания о событиях</div>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.reminders}
-                  onChange={(e) => handleSettingChange('reminders', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Браузер</span>
+              <input
+                type="checkbox"
+                checked={settings.browser}
+                onChange={(e) => handleSettingChange('browser', e.target.checked)}
+                className="toggle"
+                disabled={permission !== 'granted'}
+              />
+            </label>
+            
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Telegram</span>
+              <input
+                type="checkbox"
+                checked={settings.telegram}
+                onChange={(e) => handleSettingChange('telegram', e.target.checked)}
+                className="toggle"
+                disabled={!telegramSupported}
+              />
+            </label>
           </div>
 
           {/* Reminder Time */}
-          {settings.reminders && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-gray-900">Время напоминания</h3>
-              <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-600">Напомнить за:</label>
-                <select
-                  value={settings.reminderTime}
-                  onChange={(e) => handleSettingChange('reminderTime', parseInt(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value={5}>5 минут</option>
-                  <option value={15}>15 минут</option>
-                  <option value={30}>30 минут</option>
-                  <option value={60}>1 час</option>
-                  <option value={1440}>1 день</option>
-                </select>
-              </div>
+          <div className="space-y-3">
+            <h3 className="font-medium text-gray-900 dark:text-white">Время напоминания</h3>
+            <div className="flex items-center gap-3">
+              <Clock size={16} className="text-gray-500" />
+              <select
+                value={settings.reminderTime}
+                onChange={(e) => handleSettingChange('reminderTime', Number(e.target.value))}
+                className="select flex-1"
+              >
+                <option value={5}>За 5 минут</option>
+                <option value={15}>За 15 минут</option>
+                <option value={30}>За 30 минут</option>
+                <option value={60}>За 1 час</option>
+                <option value={1440}>За 1 день</option>
+              </select>
             </div>
-          )}
+          </div>
 
           {/* Quiet Hours */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-gray-900">Тихие часы</h3>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.quietHours.enabled}
-                  onChange={(e) => handleQuietHoursChange('enabled', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
-
+          <div className="space-y-3">
+            <label className="flex items-center justify-between">
+              <span className="font-medium text-gray-900 dark:text-white">Тихие часы</span>
+              <input
+                type="checkbox"
+                checked={settings.quietHours.enabled}
+                onChange={(e) => handleSettingChange('quietHours.enabled', e.target.checked)}
+                className="toggle"
+              />
+            </label>
+            
             {settings.quietHours.enabled && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Начало
-                  </label>
-                  <input
-                    type="time"
-                    value={settings.quietHours.start}
-                    onChange={(e) => handleQuietHoursChange('start', e.target.value)}
-                    className="input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Конец
-                  </label>
-                  <input
-                    type="time"
-                    value={settings.quietHours.end}
-                    onChange={(e) => handleQuietHoursChange('end', e.target.value)}
-                    className="input"
-                  />
-                </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="time"
+                  value={settings.quietHours.start}
+                  onChange={(e) => handleSettingChange('quietHours.start', e.target.value)}
+                  className="select"
+                />
+                <span className="text-gray-500">—</span>
+                <input
+                  type="time"
+                  value={settings.quietHours.end}
+                  onChange={(e) => handleSettingChange('quietHours.end', e.target.value)}
+                  className="select"
+                />
               </div>
             )}
           </div>
 
-          {/* Additional Settings */}
+          {/* Additional Options */}
           <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">Дополнительно</h3>
+            <h3 className="font-medium text-gray-900 dark:text-white">Дополнительно</h3>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertCircle size={20} className="text-gray-600" />
-                <div>
-                  <div className="font-medium text-gray-900">Звук</div>
-                  <div className="text-sm text-gray-600">Звуковые уведомления</div>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.sound}
-                  onChange={(e) => handleSettingChange('sound', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="w-5 h-5 flex items-center justify-center">
-                <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-900">Вибрация</div>
-                <div className="text-sm text-gray-600">Вибрация при уведомлениях</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.vibration}
-                  onChange={(e) => handleSettingChange('vibration', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
-            </div>
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Звук</span>
+              <input
+                type="checkbox"
+                checked={settings.sound}
+                onChange={(e) => handleSettingChange('sound', e.target.checked)}
+                className="toggle"
+              />
+            </label>
+            
+            <label className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Вибрация</span>
+              <input
+                type="checkbox"
+                checked={settings.vibration}
+                onChange={(e) => handleSettingChange('vibration', e.target.checked)}
+                className="toggle"
+              />
+            </label>
           </div>
 
           {/* Actions */}

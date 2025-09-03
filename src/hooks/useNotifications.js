@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useTelegramBot } from './useTelegramBot'
+import { useTelegramNotifications } from './useTelegramNotifications'
 
 export function useNotifications() {
   const [permission, setPermission] = useState('default')
   const [isSupported, setIsSupported] = useState(false)
   const [settings, setSettings] = useState({
     browser: true,
-    telegram: false,
+    telegram: true,
     events: true,
     tasks: true,
     reminders: true,
@@ -20,10 +20,15 @@ export function useNotifications() {
     }
   })
 
-  const { sendEventNotification } = useTelegramBot()
+  const { 
+    isSupported: telegramSupported,
+    sendNotification: sendTelegramNotification,
+    sendEventNotification: sendTelegramEventNotification,
+    scheduleNotification: scheduleTelegramNotification
+  } = useTelegramNotifications()
 
   useEffect(() => {
-    setIsSupported('Notification' in window)
+    setIsSupported('Notification' in window || telegramSupported)
     if ('Notification' in window) {
       setPermission(Notification.permission)
     }
@@ -31,73 +36,162 @@ export function useNotifications() {
     // Загружаем настройки
     const savedSettings = localStorage.getItem('notificationSettings')
     if (savedSettings) {
-      setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }))
+      try {
+        setSettings(JSON.parse(savedSettings))
+      } catch (error) {
+        console.error('Ошибка загрузки настроек уведомлений:', error)
+      }
     }
-  }, [])
+  }, [telegramSupported])
 
-  const requestPermission = async () => {
-    if (!isSupported) return false
+  // Запрос разрешения на уведомления
+  const requestPermission = useCallback(async () => {
+    if (!('Notification' in window)) return false
     
     try {
       const result = await Notification.requestPermission()
       setPermission(result)
       return result === 'granted'
     } catch (error) {
-      console.error('Error requesting notification permission:', error)
+      console.error('Ошибка запроса разрешения:', error)
       return false
     }
-  }
+  }, [])
 
-  const showNotification = useCallback(async (title, options = {}, type = 'browser') => {
-    let success = false
-
-    // Браузерные уведомления
-    if (type === 'browser' && settings.browser && isSupported && permission === 'granted') {
-      try {
-        const notification = new Notification(title, {
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          ...options
-        })
-        
-        setTimeout(() => {
-          notification.close()
-        }, 5000)
-        
-        success = true
-      } catch (error) {
-        console.error('Error showing browser notification:', error)
-      }
+  // Отправка уведомления в браузере
+  const sendBrowserNotification = useCallback(async (title, options = {}) => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      return false
     }
 
-    // Telegram уведомления
-    if (type === 'telegram' && settings.telegram) {
-      success = await sendEventNotification({
-        title,
-        description: options.body || '',
-        date: new Date().toISOString(),
-        type: 'notification'
-      }, 'created')
+    try {
+      const notification = new Notification(title, {
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        ...options
+      })
+
+      // Автоматически закрываем через 5 секунд
+      setTimeout(() => {
+        notification.close()
+      }, 5000)
+
+      return true
+    } catch (error) {
+      console.error('Ошибка отправки браузерного уведомления:', error)
+      return false
+    }
+  }, [])
+
+  // Отправка уведомления о событии
+  const sendEventNotification = useCallback(async (event, type = 'reminder') => {
+    const emoji = {
+      reminder: '⏰',
+      created: '✨',
+      updated: '✏️',
+      completed: '✅',
+      overdue: '🚨'
+    }
+
+    const typeText = {
+      reminder: 'Напоминание',
+      created: 'Создано',
+      updated: 'Обновлено',
+      completed: 'Завершено',
+      overdue: 'Просрочено'
+    }
+
+    const title = `${emoji[type]} ${typeText[type]}`
+    const body = `
+📅 ${event.title}
+${event.description ? `📝 ${event.description}\n` : ''}
+🕐 ${new Date(event.date).toLocaleString('ru-RU')}
+${event.location ? `📍 ${event.location}\n` : ''}
+${event.type === 'task' ? `👤 ${event.assignedTo || 'Не назначено'}` : ''}
+    `.trim()
+
+    let success = false
+
+    // Отправляем в Telegram если включено и поддерживается
+    if (settings.telegram && telegramSupported) {
+      success = await sendTelegramEventNotification(event, type)
+    }
+
+    // Отправляем в браузер если включено
+    if (settings.browser) {
+      const browserSuccess = await sendBrowserNotification(title, { body })
+      success = success || browserSuccess
     }
 
     return success
-  }, [isSupported, permission, settings.browser, settings.telegram, sendEventNotification])
+  }, [settings, telegramSupported, sendTelegramEventNotification, sendBrowserNotification])
 
-  const scheduleNotification = useCallback(async (title, options = {}, delay, type = 'browser') => {
-    if (type === 'browser' && (!isSupported || permission !== 'granted')) return null
-    
-    return setTimeout(() => {
-      showNotification(title, options, type)
-    }, delay)
-  }, [isSupported, permission, showNotification])
+  // Отправка уведомления о паре
+  const sendPairNotification = useCallback(async (action, partnerName) => {
+    const messages = {
+      connected: `🔗 Подключение к паре\n\nВы успешно подключились к ${partnerName}!`,
+      disconnected: `🔌 Отключение от пары\n\nВы отключились от ${partnerName}.`,
+      synced: `🔄 Синхронизация\n\nДанные успешно синхронизированы с ${partnerName}.`
+    }
 
+    const message = messages[action] || 'Новое уведомление'
+    let success = false
+
+    // Отправляем в Telegram если включено и поддерживается
+    if (settings.telegram && telegramSupported) {
+      success = await sendTelegramNotification('Уведомление', { body: message })
+    }
+
+    // Отправляем в браузер если включено
+    if (settings.browser) {
+      const browserSuccess = await sendBrowserNotification('Уведомление', { body: message })
+      success = success || browserSuccess
+    }
+
+    return success
+  }, [settings, telegramSupported, sendTelegramNotification, sendBrowserNotification])
+
+  // Умная отправка уведомлений (выбирает лучший способ)
+  const sendSmartNotification = useCallback(async (title, options = {}, type = 'notification') => {
+    let success = false
+
+    // Отправляем в Telegram если включено и поддерживается
+    if (settings.telegram && telegramSupported) {
+      success = await sendTelegramNotification(title, options)
+    }
+
+    // Отправляем в браузер если включено
+    if (settings.browser) {
+      const browserSuccess = await sendBrowserNotification(title, options)
+      success = success || browserSuccess
+    }
+
+    return success
+  }, [settings, telegramSupported, sendTelegramNotification, sendBrowserNotification])
+
+  // Планирование уведомлений
+  const scheduleNotification = useCallback(async (title, options = {}, delay) => {
+    if (delay <= 0) {
+      return await sendSmartNotification(title, options)
+    }
+
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        const result = await sendSmartNotification(title, options)
+        resolve(result)
+      }, delay)
+    })
+  }, [sendSmartNotification])
+
+  // Обновление настроек
   const updateSettings = useCallback((newSettings) => {
     const updatedSettings = { ...settings, ...newSettings }
     setSettings(updatedSettings)
     localStorage.setItem('notificationSettings', JSON.stringify(updatedSettings))
   }, [settings])
 
-  const isQuietHours = useCallback(() => {
+  // Проверка тихих часов
+  const isInQuietHours = useCallback(() => {
     if (!settings.quietHours.enabled) return false
     
     const now = new Date()
@@ -117,43 +211,17 @@ export function useNotifications() {
     }
   }, [settings.quietHours])
 
-  const sendSmartNotification = useCallback(async (title, options = {}, eventType = 'event') => {
-    // Проверяем тихие часы
-    if (isQuietHours()) {
-      console.log('Тихие часы - уведомление отложено')
-      return false
-    }
-
-    // Проверяем настройки для типа события
-    if (eventType === 'event' && !settings.events) return false
-    if (eventType === 'task' && !settings.tasks) return false
-    if (eventType === 'reminder' && !settings.reminders) return false
-
-    let success = false
-
-    // Отправляем в браузер
-    if (settings.browser) {
-      success = await showNotification(title, options, 'browser')
-    }
-
-    // Отправляем в Telegram
-    if (settings.telegram) {
-      const telegramSuccess = await showNotification(title, options, 'telegram')
-      success = success || telegramSuccess
-    }
-
-    return success
-  }, [isQuietHours, settings, showNotification])
-
   return {
     isSupported,
     permission,
     settings,
+    telegramSupported,
     requestPermission,
-    showNotification,
+    sendNotification: sendSmartNotification,
+    sendEventNotification,
+    sendPairNotification,
     scheduleNotification,
     updateSettings,
-    sendSmartNotification,
-    isQuietHours
+    isInQuietHours
   }
 }
