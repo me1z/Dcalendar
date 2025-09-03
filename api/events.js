@@ -1,4 +1,4 @@
-import { getCollection } from './db';
+import { getCollection } from './db.js';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 

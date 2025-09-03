@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "auth.js": {
+      "runtime": "nodejs18.x"
+    },
+    "db.js": {
+      "runtime": "nodejs18.x"
+    },
+    "events.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
