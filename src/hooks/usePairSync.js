@@ -40,7 +40,6 @@ export function usePairSync() {
       setSyncStatus('connected')
       
       // Уведомляем создателя пары о подключении
-      // Ищем все другие вкладки/окна с тем же кодом пары
       try {
         localStorage.setItem('partnerConnected', 'true')
         // Отправляем событие в localStorage для синхронизации между вкладками
@@ -52,10 +51,8 @@ export function usePairSync() {
         console.log('Ошибка уведомления о подключении:', error)
       }
       
-      // Принудительно обновляем состояние
-      setTimeout(() => {
-        window.location.reload()
-      }, 500)
+      // НЕ перезагружаем страницу, а обновляем состояние
+      // Страница автоматически перерендерится благодаря React
       
       return mockPartnerInfo
     } catch (error) {
@@ -93,6 +90,41 @@ export function usePairSync() {
       
       // В реальном приложении здесь будет API запрос
       console.log(`Синхронизация ${type}:`, data)
+      
+      // Сохраняем данные в localStorage для синхронизации с партнером
+      if (type === 'event') {
+        const existingEvents = JSON.parse(localStorage.getItem('events') || '[]')
+        
+        if (data.action === 'delete') {
+          // Удаляем событие
+          const updatedEvents = existingEvents.filter(event => event.id !== data.id)
+          localStorage.setItem('events', JSON.stringify(updatedEvents))
+        } else {
+          // Добавляем или обновляем событие
+          const eventIndex = existingEvents.findIndex(event => event.id === data.id)
+          if (eventIndex !== -1) {
+            // Обновляем существующее событие
+            existingEvents[eventIndex] = { ...existingEvents[eventIndex], ...data }
+          } else {
+            // Добавляем новое событие
+            existingEvents.push(data)
+          }
+          localStorage.setItem('events', JSON.stringify(existingEvents))
+        }
+        
+        // Уведомляем партнера о новых данных
+        localStorage.setItem('partnerDataUpdated', JSON.stringify({
+          type: 'event',
+          data: data,
+          timestamp: Date.now()
+        }))
+        
+        // Отправляем событие для синхронизации
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'partnerDataUpdated',
+          newValue: localStorage.getItem('partnerDataUpdated')
+        }))
+      }
       
       setSyncStatus('connected')
       return true
@@ -145,11 +177,46 @@ export function usePairSync() {
           setSyncStatus('connected')
         }
       }
+      
+      // Слушаем обновления данных от партнера
+      if (e.key === 'partnerDataUpdated' && e.newValue) {
+        try {
+          const updateData = JSON.parse(e.newValue)
+          if (updateData.type === 'event' && isPaired) {
+            // Обновляем события в localStorage
+            const existingEvents = JSON.parse(localStorage.getItem('events') || '[]')
+            
+            if (updateData.data.action === 'delete') {
+              // Удаляем событие
+              const updatedEvents = existingEvents.filter(event => event.id !== updateData.data.id)
+              localStorage.setItem('events', JSON.stringify(updatedEvents))
+            } else {
+              // Добавляем или обновляем событие
+              const eventIndex = existingEvents.findIndex(event => event.id === updateData.data.id)
+              if (eventIndex !== -1) {
+                // Обновляем существующее событие
+                existingEvents[eventIndex] = { ...existingEvents[eventIndex], ...updateData.data }
+              } else {
+                // Добавляем новое событие
+                existingEvents.push(updateData.data)
+              }
+              localStorage.setItem('events', JSON.stringify(updatedEvents))
+            }
+            
+            // Уведомляем компоненты об обновлении
+            window.dispatchEvent(new CustomEvent('eventsUpdated', {
+              detail: { events: existingEvents }
+            }))
+          }
+        } catch (error) {
+          console.error('Ошибка обработки данных партнера:', error)
+        }
+      }
     }
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [pairCode, partnerInfo])
+  }, [pairCode, partnerInfo, isPaired])
 
   return {
     pairCode,

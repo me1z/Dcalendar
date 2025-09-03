@@ -177,6 +177,16 @@ function App() {
     return () => clearInterval(interval)
   }, [events, sendNotification])
 
+  // Слушаем обновления событий от партнера
+  useEffect(() => {
+    const handleEventsUpdate = (e) => {
+      setEvents(e.detail.events)
+    }
+
+    window.addEventListener('eventsUpdated', handleEventsUpdate)
+    return () => window.removeEventListener('eventsUpdated', handleEventsUpdate)
+  }, [setEvents])
+
 
 
   // Если нет пары, показываем экран создания пары
