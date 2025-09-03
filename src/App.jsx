@@ -12,6 +12,7 @@ import EventForm from './components/EventForm'
 import CalendarView from './components/CalendarView'
 import EventList from './components/EventList'
 import PairSetup from './components/PairSetup'
+import PairRequired from './components/PairRequired'
 import NotificationSettings from './components/NotificationSettings'
 
 
@@ -176,13 +177,28 @@ function App() {
 
 
 
+  // Если нет пары, показываем экран создания пары
+  if (!isPaired) {
+    return (
+      <div className={`min-h-screen iphone-no-scroll ${theme === 'dark' ? 'dark' : ''}`}>
+        <Analytics />
+        <PairRequired onCreatePair={() => setShowPairSetup(true)} />
+        
+        {/* Pair Setup Modal */}
+        {showPairSetup && (
+          <PairSetup onClose={() => setShowPairSetup(false)} />
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`min-h-screen iphone-no-scroll ${theme === 'dark' ? 'dark' : ''}`}>
       <Analytics />
       
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Title */}
             <div className="flex items-center">
@@ -203,13 +219,14 @@ function App() {
 
             {/* Header Actions */}
             <div className="flex items-center gap-2">
-              {/* Pair Status */}
-              {isPaired && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
-                  <Users size={16} />
-                  <span>В паре</span>
-                </div>
-              )}
+                             {/* Pair Status */}
+               {isPaired && (
+                 <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
+                   <Users size={16} />
+                   <span>В паре</span>
+                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                 </div>
+               )}
 
               {/* Pair Setup Button */}
               <button
@@ -245,7 +262,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6">
           <button
@@ -283,9 +300,8 @@ function App() {
         {activeTab === 'list' && (
           <EventList
             events={events}
-            onToggleEvent={toggleEvent}
-            onDeleteEvent={deleteEvent}
-            onEditEvent={editEvent}
+            onToggle={toggleEvent}
+            onDelete={deleteEvent}
           />
         )}
       </main>

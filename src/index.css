@@ -89,6 +89,28 @@
   .mobile-modal {
     @apply max-w-sm sm:max-w-md lg:max-w-lg;
   }
+
+  /* iPhone оптимизация */
+  .iphone-optimized {
+    @apply max-w-full overflow-hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Компактные отступы для iPhone */
+  .iphone-compact {
+    @apply p-2 sm:p-4;
+  }
+
+  /* Адаптивная высота для iPhone */
+  .iphone-height {
+    min-height: 60px;
+  }
+
+  /* Убираем горизонтальную прокрутку на iPhone */
+  .iphone-no-scroll {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Telegram Mini App specific styles */

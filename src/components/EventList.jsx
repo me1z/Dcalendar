@@ -142,7 +142,7 @@ function EventList({ events, onToggle, onDelete }) {
   }
 
   return (
-    <div className="p-4 pb-20">
+    <div className="p-2 sm:p-4 pb-20 iphone-no-scroll">
       {/* Header with Stats */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">

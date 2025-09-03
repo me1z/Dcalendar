@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
-import { Users, Copy, Check, X, Link, UserPlus } from 'lucide-react'
+import { Users, Copy, Check, X, Link, UserPlus, Info, Trash2, AlertCircle } from 'lucide-react'
 import { usePairSync } from '../hooks/usePairSync'
 
 function PairSetup({ onClose }) {
-  const [mode, setMode] = useState('menu') // menu, create, join
+  const [mode, setMode] = useState('menu') // menu, create, join, info
   const [joinCode, setJoinCode] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
   const {
     pairCode,
@@ -19,12 +20,16 @@ function PairSetup({ onClose }) {
   } = usePairSync()
 
   const handleCreatePair = () => {
-    const code = generatePairCode()
+    generatePairCode()
     setMode('create')
   }
 
   const handleJoinPair = () => {
     setMode('join')
+  }
+
+  const handleShowPairInfo = () => {
+    setMode('info')
   }
 
   const handleConnect = async () => {
@@ -52,9 +57,32 @@ function PairSetup({ onClose }) {
   }
 
   const handleDisconnect = () => {
-    if (confirm('Вы уверены, что хотите отключиться от пары?')) {
-      disconnectFromPair()
-      setMode('menu')
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDisconnect = () => {
+    disconnectFromPair()
+    setShowDeleteConfirm(false)
+    setMode('menu')
+  }
+
+  const getStatusColor = () => {
+    switch (syncStatus) {
+      case 'connected': return 'text-green-600 bg-green-100'
+      case 'connecting': return 'text-yellow-600 bg-yellow-100'
+      case 'syncing': return 'text-blue-600 bg-blue-100'
+      case 'error': return 'text-red-600 bg-red-100'
+      default: return 'text-gray-600 bg-gray-100'
+    }
+  }
+
+  const getStatusLabel = () => {
+    switch (syncStatus) {
+      case 'connected': return 'Подключено'
+      case 'connecting': return 'Подключение...'
+      case 'syncing': return 'Синхронизация...'
+      case 'error': return 'Ошибка'
+      default: return 'Отключено'
     }
   }
 
@@ -85,9 +113,41 @@ function PairSetup({ onClose }) {
     )
   }
 
+  if (showDeleteConfirm) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Удалить пару?
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Это действие нельзя отменить. Все данные о паре будут удалены.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="btn-secondary flex-1"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={confirmDisconnect}
+              className="btn-primary flex-1 bg-red-600 hover:bg-red-700"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto iphone-no-scroll">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -106,26 +166,42 @@ function PairSetup({ onClose }) {
           {mode === 'menu' && (
             <div className="space-y-4">
               {isPaired ? (
-                <div className="text-center py-6">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-blue-600" />
+                <div className="space-y-4">
+                  <div className="text-center py-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Вы подключены к паре
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Партнер: {partnerInfo?.name || 'Неизвестно'}
+                    </p>
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
+                      <span>{getStatusLabel()}</span>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Вы подключены к паре
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Партнер: {partnerInfo?.name || 'Неизвестно'}
-                  </p>
-                  <div className="flex gap-2">
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleShowPairInfo}
+                      className="w-full btn-secondary flex items-center justify-center gap-2"
+                    >
+                      <Info size={20} />
+                      Информация о паре
+                    </button>
+                    
                     <button
                       onClick={handleDisconnect}
-                      className="btn-secondary flex-1"
+                      className="w-full btn-secondary flex items-center justify-center gap-2 text-red-600 hover:text-red-700"
                     >
-                      Отключиться
+                      <Trash2 size={20} />
+                      Удалить пару
                     </button>
+                    
                     <button
                       onClick={onClose}
-                      className="btn-primary flex-1"
+                      className="w-full btn-primary"
                     >
                       Закрыть
                     </button>
@@ -162,6 +238,60 @@ function PairSetup({ onClose }) {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {mode === 'info' && (
+            <div className="space-y-4">
+              <div className="text-center py-4">
+                <Info className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Информация о паре
+                </h3>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Статус:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
+                    {getStatusLabel()}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Партнер:</span>
+                  <span className="text-sm text-gray-900">{partnerInfo?.name || 'Неизвестно'}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">ID пары:</span>
+                  <span className="text-sm font-mono text-gray-900">{pairCode}</span>
+                </div>
+                
+                {partnerInfo?.lastSeen && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Последний раз:</span>
+                    <span className="text-sm text-gray-900">
+                      {new Date(partnerInfo.lastSeen).toLocaleDateString('ru-RU')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMode('menu')}
+                  className="btn-secondary flex-1"
+                >
+                  Назад
+                </button>
+                <button
+                  onClick={onClose}
+                  className="btn-primary flex-1"
+                >
+                  Закрыть
+                </button>
+              </div>
             </div>
           )}
 
