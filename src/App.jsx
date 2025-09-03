@@ -143,7 +143,7 @@ function App() {
     return () => {
       window.removeEventListener('eventsUpdated', handleEventsUpdated)
     }
-  }, [setEvents])
+  }, []) // Убираем setEvents из зависимостей
 
 
 

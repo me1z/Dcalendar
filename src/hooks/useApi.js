@@ -86,6 +86,8 @@ export function useAuth() {
       });
 
       if (response.success) {
+        // Обновляем пользователя с новым кодом пары
+        setUser(prev => prev ? { ...prev, pairCode: response.pairCode } : null);
         return response.pairCode;
       }
     } catch (err) {

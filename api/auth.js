@@ -1,5 +1,6 @@
 import { getCollection } from './db';
 import jwt from 'jsonwebtoken';
+import { ObjectId } from 'mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
           telegramId,
           name: name || 'Пользователь',
           createdAt: new Date(),
+          updatedAt: new Date(),
           pairCode: null,
           partnerId: null
         };
@@ -67,7 +69,7 @@ export default async function handler(req, res) {
         const pairCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         
         await usersCollection.updateOne(
-          { _id: decoded.userId },
+          { _id: new ObjectId(decoded.userId) },
           { $set: { pairCode, updatedAt: new Date() } }
         );
 
@@ -105,7 +107,7 @@ export default async function handler(req, res) {
 
         // Создаем пару
         await usersCollection.updateOne(
-          { _id: decoded.userId },
+          { _id: new ObjectId(decoded.userId) },
           { 
             $set: { 
               pairCode: null, 
@@ -120,7 +122,7 @@ export default async function handler(req, res) {
           { 
             $set: { 
               pairCode: null, 
-              partnerId: decoded.userId,
+              partnerId: new ObjectId(decoded.userId),
               updatedAt: new Date() 
             } 
           }

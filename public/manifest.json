@@ -1,7 +1,7 @@
 {
   "name": "DCalendar - Календарь для пар",
   "short_name": "DCalendar",
-  "description": "Современное приложение-календарь для планирования событий и задач в паре",
+  "description": "Синхронизированный календарь для пар с уведомлениями",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -11,12 +11,6 @@
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }

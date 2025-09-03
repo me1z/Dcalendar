@@ -4,7 +4,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || 'dcalendar';
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+  throw new Error('Please define the MONGODB_URI environment variable');
 }
 
 let cachedClient = null;
@@ -15,17 +15,26 @@ export async function connectToDatabase() {
     return { client: cachedClient, db: cachedDb };
   }
 
-  const client = await MongoClient.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  try {
+    const client = await MongoClient.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
 
-  const db = client.db(MONGODB_DB);
+    const db = client.db(MONGODB_DB);
+    
+    // Проверяем подключение
+    await db.admin().ping();
 
-  cachedClient = client;
-  cachedDb = db;
+    cachedClient = client;
+    cachedDb = db;
 
-  return { client, db };
+    console.log('MongoDB connected successfully');
+    return { client, db };
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw new Error(`Failed to connect to MongoDB: ${error.message}`);
+  }
 }
 
 export async function getCollection(collectionName) {

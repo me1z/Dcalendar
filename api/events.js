@@ -1,5 +1,6 @@
 import { getCollection } from './db';
 import jwt from 'jsonwebtoken';
+import { ObjectId } from 'mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       // Получение событий пользователя и его пары
-      const user = await usersCollection.findOne({ _id: decoded.userId });
+      const user = await usersCollection.findOne({ _id: new ObjectId(decoded.userId) });
       
       if (!user || !user.partnerId) {
         // Если нет пары, возвращаем только события пользователя
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
         .find({ 
           $or: [
             { userId: decoded.userId },
-            { userId: user.partnerId }
+            { userId: user.partnerId.toString() }
           ]
         })
         .sort({ date: 1, time: 1 })
@@ -80,8 +81,8 @@ export default async function handler(req, res) {
       }
 
       // Проверяем, что событие принадлежит пользователю или его паре
-      const user = await usersCollection.findOne({ _id: decoded.userId });
-      const event = await eventsCollection.findOne({ _id: eventId });
+      const user = await usersCollection.findOne({ _id: new ObjectId(decoded.userId) });
+      const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
       
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
@@ -99,7 +100,7 @@ export default async function handler(req, res) {
       };
 
       await eventsCollection.updateOne(
-        { _id: eventId },
+        { _id: new ObjectId(eventId) },
         { $set: updatedEvent }
       );
 
@@ -118,7 +119,7 @@ export default async function handler(req, res) {
       }
 
       // Проверяем, что событие принадлежит пользователю
-      const event = await eventsCollection.findOne({ _id: eventId });
+      const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) });
       
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
@@ -128,7 +129,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Can only delete your own events' });
       }
 
-      await eventsCollection.deleteOne({ _id: eventId });
+      await eventsCollection.deleteOne({ _id: new ObjectId(eventId) });
 
       return res.status(200).json({ success: true });
     }
