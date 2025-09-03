@@ -55,12 +55,13 @@ export default async function handler(req, res) {
 
     if (action === 'create-pair') {
       // Создание пары
-      const { token } = req.body;
-      
-      if (!token) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Token required' });
       }
 
+      const token = authHeader.substring(7);
+      
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
         const usersCollection = await getCollection('users');
@@ -84,10 +85,16 @@ export default async function handler(req, res) {
 
     if (action === 'join-pair') {
       // Присоединение к паре
-      const { token, pairCode } = req.body;
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Token required' });
+      }
+
+      const token = authHeader.substring(7);
+      const { pairCode } = req.body;
       
-      if (!token || !pairCode) {
-        return res.status(400).json({ error: 'Token and pair code required' });
+      if (!pairCode) {
+        return res.status(400).json({ error: 'Pair code required' });
       }
 
       try {
