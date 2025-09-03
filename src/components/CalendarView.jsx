@@ -95,7 +95,7 @@ function CalendarView({ events = [], onEventClick, onCreateEvent }) {
       time,
       isOverdue,
       priority: event.priority,
-      assignedTo: event.assignedTo,
+      assignedTo: event.assignedTo || 'both',
       location: event.location
     }
   }
@@ -242,10 +242,10 @@ function CalendarView({ events = [], onEventClick, onCreateEvent }) {
                         <Clock size={10} />
                         <span>{eventInfo.time}</span>
                         
-                        {event.location && (
+                        {eventInfo.location && (
                           <>
                             <MapPin size={10} />
-                            <span className="truncate">{event.location}</span>
+                            <span className="truncate">{eventInfo.location}</span>
                           </>
                         )}
                         

@@ -6,19 +6,31 @@ import { ru } from 'date-fns/locale'
 function EventView({ event, onClose, onToggle, onEdit }) {
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'low': return 'bg-green-100 text-green-800'
-      case 'medium': return 'bg-yellow-100 text-yellow-800'
+      case 'urgent': return 'bg-red-100 text-red-800'
       case 'high': return 'bg-orange-100 text-orange-800'
+      case 'medium': return 'bg-yellow-100 text-yellow-800'
+      case 'low': return 'bg-green-100 text-green-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getPriorityIcon = (priority) => {
     switch (priority) {
-      case 'low': return <Star size={16} className="text-green-600" />
-      case 'medium': return <Star size={16} className="text-yellow-600" />
+      case 'urgent': return <Star size={16} className="text-red-600" />
       case 'high': return <Star size={16} className="text-orange-600" />
+      case 'medium': return <Star size={16} className="text-yellow-600" />
+      case 'low': return <Star size={16} className="text-green-600" />
       default: return <Star size={16} className="text-gray-600" />
+    }
+  }
+
+  const getPriorityLabel = (priority) => {
+    switch (priority) {
+      case 'urgent': return 'Срочно'
+      case 'high': return 'Высокий'
+      case 'medium': return 'Средний'
+      case 'low': return 'Низкий'
+      default: return 'Не указан'
     }
   }
 
@@ -40,9 +52,55 @@ function EventView({ event, onClose, onToggle, onEdit }) {
     }
   }
 
-     return (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 safe-area-all">
-      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-sm max-h-[95vh] overflow-y-auto">
+  const getAssignedToLabel = (assignedTo) => {
+    switch (assignedTo) {
+      case 'me': return 'Мне'
+      case 'partner': return 'Партнеру'
+      case 'both': return 'Нам обоим'
+      default: return assignedTo || 'Не назначено'
+    }
+  }
+
+  const getAssignedToIcon = (assignedTo) => {
+    switch (assignedTo) {
+      case 'me': return '👤'
+      case 'partner': return '👥'
+      case 'both': return '💑'
+      default: return '👤'
+    }
+  }
+
+  const getCategoryLabel = (category) => {
+    const categories = {
+      general: 'Общее',
+      work: 'Работа',
+      personal: 'Личное',
+      health: 'Здоровье',
+      travel: 'Путешествия',
+      shopping: 'Покупки',
+      family: 'Семья',
+      entertainment: 'Развлечения'
+    }
+    return categories[category] || category
+  }
+
+  const getCategoryIcon = (category) => {
+    const icons = {
+      general: '📅',
+      work: '💼',
+      personal: '👤',
+      health: '🏥',
+      travel: '✈️',
+      shopping: '🛒',
+      family: '👨‍👩‍👧‍👦',
+      entertainment: '🎉'
+    }
+    return icons[category] || '📅'
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-sm max-h-[95vh] overflow-y-auto safe-area-all">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
@@ -90,14 +148,30 @@ function EventView({ event, onClose, onToggle, onEdit }) {
           )}
 
           {/* Priority */}
-          <div className="flex items-center gap-2">
-            {getPriorityIcon(event.priority)}
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(event.priority)}`}>
-              {event.priority === 'low' && 'Низкий'}
-              {event.priority === 'medium' && 'Средний'}
-              {event.priority === 'high' && 'Высокий'}
-            </span>
-          </div>
+          {event.priority && (
+            <div className="flex items-center gap-2">
+              {getPriorityIcon(event.priority)}
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(event.priority)}`}>
+                {getPriorityLabel(event.priority)}
+              </span>
+            </div>
+          )}
+
+          {/* Assigned To */}
+          {event.assignedTo && (
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <span className="text-lg">{getAssignedToIcon(event.assignedTo)}</span>
+              <span className="text-sm">{getAssignedToLabel(event.assignedTo)}</span>
+            </div>
+          )}
+
+          {/* Category */}
+          {event.category && event.category !== 'general' && (
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <span className="text-lg">{getCategoryIcon(event.category)}</span>
+              <span className="text-sm">{getCategoryLabel(event.category)}</span>
+            </div>
+          )}
 
           {/* Location */}
           {event.location && (

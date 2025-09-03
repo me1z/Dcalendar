@@ -69,9 +69,9 @@ function NotificationSettings({ onClose }) {
     return 'Не запрошено'
   }
 
-     return (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 safe-area-all">
-      <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-sm max-h-[95vh] overflow-y-auto safe-area-all">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -124,7 +124,7 @@ function NotificationSettings({ onClose }) {
                 Уведомления будут показываться прямо в Telegram
               </p>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Приложение должно быть запущено в Telegram
               </p>
             )}
@@ -140,7 +140,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.events}
                 onChange={(e) => handleSettingChange('events', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
             </label>
             
@@ -150,7 +150,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.tasks}
                 onChange={(e) => handleSettingChange('tasks', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
             </label>
             
@@ -160,7 +160,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.reminders}
                 onChange={(e) => handleSettingChange('reminders', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
             </label>
           </div>
@@ -175,7 +175,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.browser}
                 onChange={(e) => handleSettingChange('browser', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 disabled={permission !== 'granted'}
               />
             </label>
@@ -186,7 +186,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.telegram}
                 onChange={(e) => handleSettingChange('telegram', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 disabled={!telegramSupported}
               />
             </label>
@@ -200,7 +200,7 @@ function NotificationSettings({ onClose }) {
               <select
                 value={settings.reminderTime}
                 onChange={(e) => handleSettingChange('reminderTime', Number(e.target.value))}
-                className="select flex-1"
+                className="input flex-1"
               >
                 <option value={5}>За 5 минут</option>
                 <option value={15}>За 15 минут</option>
@@ -219,7 +219,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.quietHours.enabled}
                 onChange={(e) => handleSettingChange('quietHours.enabled', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
             </label>
             
@@ -229,14 +229,14 @@ function NotificationSettings({ onClose }) {
                   type="time"
                   value={settings.quietHours.start}
                   onChange={(e) => handleSettingChange('quietHours.start', e.target.value)}
-                  className="select"
+                  className="input"
                 />
                 <span className="text-gray-500">—</span>
                 <input
                   type="time"
                   value={settings.quietHours.end}
                   onChange={(e) => handleSettingChange('quietHours.end', e.target.value)}
-                  className="select"
+                  className="input"
                 />
               </div>
             )}
@@ -252,7 +252,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.sound}
                 onChange={(e) => handleSettingChange('sound', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
             </label>
             
@@ -262,7 +262,7 @@ function NotificationSettings({ onClose }) {
                 type="checkbox"
                 checked={settings.vibration}
                 onChange={(e) => handleSettingChange('vibration', e.target.checked)}
-                className="toggle"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
             </label>
           </div>

@@ -168,18 +168,18 @@ function PairSetup({ onClose, onPairCreated }) {
     )
   }
 
-     return (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 safe-area-all">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto iphone-no-scroll">
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-sm max-h-[95vh] overflow-y-auto safe-area-all">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Users size={20} />
             Настройка пары
           </h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
             <X size={20} />
           </button>
@@ -194,10 +194,10 @@ function PairSetup({ onClose, onPairCreated }) {
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Users className="w-8 h-8 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                       Вы подключены к паре
                     </h3>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
                       Партнер: {partnerInfo?.name || 'Неизвестно'}
                     </p>
                     <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
@@ -234,10 +234,10 @@ function PairSetup({ onClose, onPairCreated }) {
                 <>
                   <div className="text-center py-4">
                     <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                       Создайте или присоединитесь к паре
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                       Синхронизируйте события с вашим партнером
                     </p>
                   </div>
@@ -268,33 +268,33 @@ function PairSetup({ onClose, onPairCreated }) {
             <div className="space-y-4">
               <div className="text-center py-4">
                 <Info className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Информация о паре
                 </h3>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Статус:</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Статус:</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
                     {getStatusLabel()}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Партнер:</span>
-                  <span className="text-sm text-gray-900">{partnerInfo?.name || 'Неизвестно'}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Партнер:</span>
+                  <span className="text-sm text-gray-900 dark:text-white">{partnerInfo?.name || 'Неизвестно'}</span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">ID пары:</span>
-                  <span className="text-sm font-mono text-gray-900">{pairCode}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ID пары:</span>
+                  <span className="text-sm font-mono text-gray-900 dark:text-white">{pairCode}</span>
                 </div>
                 
                 {partnerInfo?.lastSeen && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Последний раз:</span>
-                    <span className="text-sm text-gray-900">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Последний раз:</span>
+                    <span className="text-sm text-gray-900 dark:text-white">
                       {new Date(partnerInfo.lastSeen).toLocaleDateString('ru-RU')}
                     </span>
                   </div>
@@ -322,16 +322,16 @@ function PairSetup({ onClose, onPairCreated }) {
             <div className="space-y-4">
               <div className="text-center py-4">
                 <Link className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Создание пары
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   Поделитесь этим кодом с партнером
                 </p>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-3xl font-mono font-bold text-gray-900 mb-2 tracking-wider">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
+                <div className="text-3xl font-mono font-bold text-gray-900 dark:text-white mb-2 tracking-wider">
                   {pairCode}
                 </div>
                 <button
@@ -352,9 +352,9 @@ function PairSetup({ onClose, onPairCreated }) {
                 </button>
               </div>
 
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">Как подключиться:</h4>
-                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+              <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Как подключиться:</h4>
+                <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
                   <li>Отправьте код партнеру</li>
                   <li>Партнер вводит код в своем приложении</li>
                   <li>Соединение установится автоматически</li>
@@ -382,16 +382,16 @@ function PairSetup({ onClose, onPairCreated }) {
             <div className="space-y-4">
               <div className="text-center py-4">
                 <UserPlus className="w-16 h-16 text-green-600 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Присоединение к паре
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   Введите код, полученный от партнера
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Код подключения
                 </label>
                 <input

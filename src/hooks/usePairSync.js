@@ -51,15 +51,12 @@ export function usePairSync() {
         console.log('Ошибка уведомления о подключении:', error)
       }
       
-      // НЕ перезагружаем страницу, а обновляем состояние
-      // Страница автоматически перерендерится благодаря React
-      
       return mockPartnerInfo
     } catch (error) {
       setSyncStatus('error')
       throw error
     }
-  }, [setPairCode])
+  }, [setPairCode, setPartnerInfo])
 
   // Функция для уведомления о подключении партнера (для создателя пары)
   const notifyPartnerConnected = useCallback(() => {
@@ -76,7 +73,7 @@ export function usePairSync() {
     setIsPaired(false)
     setPartnerInfo(null)
     setSyncStatus('disconnected')
-  }, [setPairCode])
+  }, [setPairCode, setPartnerInfo])
 
   // Синхронизация данных с партнером
   const syncData = useCallback(async (data, type) => {
@@ -164,7 +161,7 @@ export function usePairSync() {
       // Очищаем флаг
       localStorage.removeItem('partnerConnected')
     }
-  }, [pairCode, partnerInfo])
+  }, [pairCode, partnerInfo, setPartnerInfo])
 
   // Дополнительная проверка для создателя пары
   useEffect(() => {
@@ -189,7 +186,7 @@ export function usePairSync() {
 
       return () => clearInterval(interval)
     }
-  }, [pairCode, partnerInfo])
+  }, [pairCode, partnerInfo, setPartnerInfo])
 
   // Слушаем изменения в localStorage для синхронизации между вкладками
   useEffect(() => {
@@ -231,7 +228,7 @@ export function usePairSync() {
                 // Добавляем новое событие
                 existingEvents.push(updateData.data)
               }
-              localStorage.setItem('events', JSON.stringify(updatedEvents))
+              localStorage.setItem('events', JSON.stringify(existingEvents))
             }
             
             // Уведомляем компоненты об обновлении

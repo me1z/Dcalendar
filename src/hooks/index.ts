@@ -4,6 +4,72 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CalendarEvent, Event, Task } from '../types';
 import { eventUtils, dateUtils } from '../utils';
 
+// Types for hooks
+export interface Event {
+  id: string
+  title: string
+  description?: string
+  date: string
+  time?: string
+  type: 'task' | 'event' | 'reminder'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  location?: string
+  assignedTo: 'me' | 'partner' | 'both'
+  category: string
+  completed: boolean
+  createdAt: string
+  updatedAt?: string
+  reminder?: {
+    enabled: boolean
+    time: number
+  }
+  repeat?: string
+}
+
+export interface PartnerInfo {
+  id: string
+  name: string
+  avatar?: string
+  lastSeen: string
+}
+
+export interface NotificationSettings {
+  browser: boolean
+  telegram: boolean
+  events: boolean
+  tasks: boolean
+  reminders: boolean
+  sound: boolean
+  vibration: boolean
+  reminderTime: number
+  quietHours: {
+    enabled: boolean
+    start: string
+    end: string
+  }
+}
+
+export interface TelegramWebApp {
+  ready: () => void
+  expand: () => void
+  close: () => void
+  showAlert: (message: string) => void
+  showConfirm: (message: string, callback: (result: boolean) => void) => void
+  showPopup: (params: any) => void
+  requestWriteAccess: () => Promise<boolean>
+  onEvent: (event: string, callback: () => void) => void
+  colorScheme: string
+  initDataUnsafe?: {
+    user?: {
+      id: number
+      first_name: string
+      last_name?: string
+      username?: string
+      language_code?: string
+    }
+  }
+}
+
 // Хук для работы с локальным хранилищем
 export const useLocalStorage = <T>(key: string, initialValue: T) => {
   const [storedValue, setStoredValue] = useState<T>(initialValue);

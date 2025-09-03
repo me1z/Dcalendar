@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { X, Calendar, Clock, Tag, Bell, MapPin, User, Star } from 'lucide-react'
+import { format } from 'date-fns'
 
 function EventForm({ onSubmit, onClose, event, selectedDate }) {
   const [formData, setFormData] = useState({
@@ -10,6 +11,8 @@ function EventForm({ onSubmit, onClose, event, selectedDate }) {
     type: 'task',
     priority: 'medium',
     location: '',
+    assignedTo: 'both',
+    category: 'general',
     reminder: { enabled: false, time: 15 }
   })
 
@@ -23,6 +26,8 @@ function EventForm({ onSubmit, onClose, event, selectedDate }) {
         type: event.type || 'task',
         priority: event.priority || 'medium',
         location: event.location || '',
+        assignedTo: event.assignedTo || 'both',
+        category: event.category || 'general',
         reminder: event.reminder || { enabled: false, time: 15 }
       })
     } else {
@@ -30,10 +35,10 @@ function EventForm({ onSubmit, onClose, event, selectedDate }) {
       let defaultDate
       if (selectedDate) {
         // Если есть выбранная дата из календаря, используем её
-        defaultDate = selectedDate.toISOString().split('T')[0]
+        defaultDate = format(selectedDate, 'yyyy-MM-dd')
       } else {
         // Иначе используем сегодняшнюю дату
-        defaultDate = new Date().toISOString().split('T')[0]
+        defaultDate = format(new Date(), 'yyyy-MM-dd')
       }
       setFormData(prev => ({ ...prev, date: defaultDate, type: 'task' }))
     }
@@ -68,9 +73,9 @@ function EventForm({ onSubmit, onClose, event, selectedDate }) {
     }))
   }
 
-     return (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 safe-area-all">
-      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-sm max-h-[95vh] overflow-y-auto">
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-sm max-h-[95vh] overflow-y-auto safe-area-all">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -153,6 +158,44 @@ function EventForm({ onSubmit, onClose, event, selectedDate }) {
                 <option value="low">Низкий</option>
                 <option value="medium">Средний</option>
                 <option value="high">Высокий</option>
+                <option value="urgent">Срочно</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Assigned To and Category */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Назначено
+              </label>
+              <select
+                value={formData.assignedTo}
+                onChange={(e) => handleChange('assignedTo', e.target.value)}
+                className="input w-full text-sm"
+              >
+                <option value="both">Нам обоим</option>
+                <option value="me">Мне</option>
+                <option value="partner">Партнеру</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Категория
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => handleChange('category', e.target.value)}
+                className="input w-full text-sm"
+              >
+                <option value="general">Общее</option>
+                <option value="work">Работа</option>
+                <option value="personal">Личное</option>
+                <option value="health">Здоровье</option>
+                <option value="travel">Путешествия</option>
+                <option value="shopping">Покупки</option>
+                <option value="family">Семья</option>
+                <option value="entertainment">Развлечения</option>
               </select>
             </div>
           </div>

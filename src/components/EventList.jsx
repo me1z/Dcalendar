@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle, Circle, Trash2, Calendar, Clock, User, Tag, Star, Filter, Search, MapPin, Bell } from 'lucide-react'
+import { CheckCircle, Circle, Trash2, Calendar, Clock, User, Tag, Star, Filter, Search, MapPin, Bell, Edit } from 'lucide-react'
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
-function EventList({ events, onToggle, onDelete }) {
+function EventList({ events, onToggle, onDelete, onEdit }) {
   const [filter, setFilter] = useState('all')
   const [sortBy, setSortBy] = useState('date')
   const [searchQuery, setSearchQuery] = useState('')
@@ -47,7 +47,7 @@ function EventList({ events, onToggle, onDelete }) {
         case 'created':
           return new Date(b.createdAt) - new Date(a.createdAt)
         case 'assigned':
-          return a.assignedTo.localeCompare(b.assignedTo)
+          return (a.assignedTo || '').localeCompare(b.assignedTo || '')
         default:
           return 0
       }
@@ -89,7 +89,7 @@ function EventList({ events, onToggle, onDelete }) {
       case 'me': return 'Мне'
       case 'partner': return 'Партнеру'
       case 'both': return 'Нам обоим'
-      default: return assignedTo
+      default: return assignedTo || 'Не назначено'
     }
   }
 
@@ -265,12 +265,23 @@ function EventList({ events, onToggle, onDelete }) {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDelete(event.id)}
-                  className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors mobile-tap"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(event)}
+                      className="p-1 hover:bg-blue-100 text-blue-600 rounded transition-colors mobile-tap"
+                    >
+                      <Edit size={16} />
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => handleDelete(event.id)}
+                    className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors mobile-tap"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Event Content */}

@@ -6,7 +6,6 @@ import { Analytics } from '@vercel/analytics/react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useNotifications } from './hooks/useNotifications'
 import { usePairSync } from './hooks/usePairSync'
-
 import { useTelegramApp } from './hooks/useTelegramApp'
 import EventForm from './components/EventForm'
 import CalendarView from './components/CalendarView'
@@ -16,7 +15,6 @@ import PairSetup from './components/PairSetup'
 import PairRequired from './components/PairRequired'
 import NotificationSettings from './components/NotificationSettings'
 import ProfileSettings from './components/ProfileSettings'
-
 
 function App() {
   const [events, setEvents] = useLocalStorage('events', [])
@@ -28,7 +26,6 @@ function App() {
   const [showProfileSettings, setShowProfileSettings] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedEvent, setSelectedEvent] = useState(null)
-
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
 
@@ -42,7 +39,8 @@ function App() {
       ...eventData,
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
-      completed: false
+      completed: false,
+      assignedTo: eventData.assignedTo || 'both'
     }
 
     setEvents(prev => [...prev, newEvent])
@@ -253,18 +251,6 @@ function App() {
     return () => clearInterval(interval)
   }, [events, sendNotification])
 
-  // Слушаем обновления событий от партнера
-  useEffect(() => {
-    const handleEventsUpdate = (e) => {
-      setEvents(e.detail.events)
-    }
-
-    window.addEventListener('eventsUpdated', handleEventsUpdate)
-    return () => window.removeEventListener('eventsUpdated', handleEventsUpdate)
-  }, [setEvents])
-
-
-
   // Если нет пары, показываем экран создания пары
   if (!isPaired) {
     return (
@@ -291,8 +277,8 @@ function App() {
     <div className={`min-h-screen iphone-no-scroll ${theme === 'dark' ? 'dark' : ''}`}>
       <Analytics />
       
-             {/* Header */}
-       <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 header-safe-super">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 header-safe-super">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Title */}
@@ -314,14 +300,14 @@ function App() {
 
             {/* Header Actions */}
             <div className="flex items-center gap-2">
-                             {/* Pair Status */}
-               {isPaired && (
-                 <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
-                   <Users size={16} />
-                   <span>В паре</span>
-                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                 </div>
-               )}
+              {/* Pair Status */}
+              {isPaired && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
+                  <Users size={16} />
+                  <span>В паре</span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                </div>
+              )}
 
               {/* Pair Setup Button */}
               <button
@@ -332,25 +318,23 @@ function App() {
                 <Users size={20} />
               </button>
 
-              
+              {/* Notification Settings */}
+              <button
+                onClick={() => setShowNotificationSettings(true)}
+                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Настройки уведомлений"
+              >
+                <Bell size={20} />
+              </button>
 
-                             {/* Notification Settings */}
-               <button
-                 onClick={() => setShowNotificationSettings(true)}
-                 className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                 title="Настройки уведомлений"
-               >
-                 <Bell size={20} />
-               </button>
-
-               {/* Profile Settings */}
-               <button
-                 onClick={() => setShowProfileSettings(true)}
-                 className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                 title="Настройки профиля"
-               >
-                 <Settings size={20} />
-               </button>
+              {/* Profile Settings */}
+              <button
+                onClick={() => setShowProfileSettings(true)}
+                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Настройки профиля"
+              >
+                <Settings size={20} />
+              </button>
 
               {/* Add Event Button */}
               <button
@@ -365,8 +349,8 @@ function App() {
         </div>
       </header>
 
-             {/* Main Content */}
-       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 main-safe-extra">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 main-safe-extra">
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6">
           <button
@@ -394,19 +378,20 @@ function App() {
         </div>
 
         {/* Tab Content */}
-                 {activeTab === 'calendar' && (
-           <CalendarView
-             events={events}
-             onEventClick={viewEvent}
-             onCreateEvent={createEventOnDate}
-           />
-         )}
+        {activeTab === 'calendar' && (
+          <CalendarView
+            events={events}
+            onEventClick={viewEvent}
+            onCreateEvent={createEventOnDate}
+          />
+        )}
 
         {activeTab === 'list' && (
           <EventList
             events={events}
             onToggle={toggleEvent}
             onDelete={deleteEvent}
+            onEdit={editEvent}
           />
         )}
       </main>
@@ -438,92 +423,85 @@ function App() {
                 Настройка пары
               </button>
               
+              <button
+                onClick={() => {
+                  setShowNotificationSettings(true)
+                  setShowMobileSidebar(false)
+                }}
+                className="w-full btn-secondary flex items-center gap-2"
+              >
+                <Bell size={20} />
+                Уведомления
+              </button>
 
-              
-                             <button
-                 onClick={() => {
-                   setShowNotificationSettings(true)
-                   setShowMobileSidebar(false)
-                 }}
-                 className="w-full btn-secondary flex items-center gap-2"
-               >
-                 <Bell size={20} />
-                 Уведомления
-               </button>
-
-               <button
-                 onClick={() => {
-                   setShowProfileSettings(true)
-                   setShowMobileSidebar(false)
-                 }}
-                 className="w-full btn-secondary flex items-center gap-2"
-               >
-                 <Settings size={20} />
-                 Профиль
-               </button>
+              <button
+                onClick={() => {
+                  setShowProfileSettings(true)
+                  setShowMobileSidebar(false)
+                }}
+                className="w-full btn-secondary flex items-center gap-2"
+              >
+                <Settings size={20} />
+                Профиль
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Modals */}
-             {showEventForm && (
-         <EventForm
-           onSubmit={editingEvent ? updateEvent : addEvent}
-           onClose={() => {
-             setShowEventForm(false)
-             setEditingEvent(null)
-             setSelectedDate(null)
-           }}
-           event={editingEvent}
-           selectedDate={selectedDate}
-         />
-       )}
+      {showEventForm && (
+        <EventForm
+          onSubmit={editingEvent ? updateEvent : addEvent}
+          onClose={() => {
+            setShowEventForm(false)
+            setEditingEvent(null)
+            setSelectedDate(null)
+          }}
+          event={editingEvent}
+          selectedDate={selectedDate}
+        />
+      )}
 
-       {showEventView && selectedEvent && (
-         <EventView
-           event={selectedEvent}
-           onClose={() => {
-             setShowEventView(false)
-             setSelectedEvent(null)
-           }}
-           onToggle={toggleEvent}
-           onEdit={(event) => {
-             setShowEventView(false)
-             setSelectedEvent(null)
-             editEvent(event)
-           }}
-         />
-       )}
+      {showEventView && selectedEvent && (
+        <EventView
+          event={selectedEvent}
+          onClose={() => {
+            setShowEventView(false)
+            setSelectedEvent(null)
+          }}
+          onToggle={toggleEvent}
+          onEdit={(event) => {
+            setShowEventView(false)
+            setSelectedEvent(null)
+            editEvent(event)
+          }}
+        />
+      )}
 
       {showPairSetup && (
         <PairSetup onClose={() => setShowPairSetup(false)} />
       )}
 
-             {showNotificationSettings && (
-         <NotificationSettings 
-           onClose={() => setShowNotificationSettings(false)}
-         />
-       )}
+      {showNotificationSettings && (
+        <NotificationSettings 
+          onClose={() => setShowNotificationSettings(false)}
+        />
+      )}
 
-       {showProfileSettings && (
-         <ProfileSettings 
-           onClose={() => setShowProfileSettings(false)}
-         />
-       )}
+      {showProfileSettings && (
+        <ProfileSettings 
+          onClose={() => setShowProfileSettings(false)}
+        />
+      )}
 
-
-
-             {/* Floating Action Button for Mobile */}
-       <button
-         onClick={() => setShowEventForm(true)}
-         className="fixed lg:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40 float-safe"
-       >
+      {/* Floating Action Button for Mobile */}
+      <button
+        onClick={() => setShowEventForm(true)}
+        className="fixed lg:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40 float-safe"
+      >
         <Plus size={24} />
       </button>
-
-      {/* Vercel Analytics */}
-      <Analytics />
     </div>
   )
 }
