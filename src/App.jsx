@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Calendar, Plus, List, Settings, Users, Bell, Menu, X } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Analytics } from '@vercel/analytics/react'
 import { useLocalStorage } from './hooks/useLocalStorage'
@@ -174,24 +174,7 @@ function App() {
     return () => clearInterval(interval)
   }, [events, sendNotification])
 
-  // Получаем текущий месяц
-  const currentDate = new Date()
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
 
-  // Фильтруем события для текущего месяца
-  const monthEvents = events.filter(event => 
-    isSameMonth(parseISO(event.date), currentDate)
-  )
-
-  // Группируем события по дням
-  const eventsByDay = monthEvents.reduce((acc, event) => {
-    const day = format(parseISO(event.date), 'yyyy-MM-dd')
-    if (!acc[day]) acc[day] = []
-    acc[day].push(event)
-    return acc
-  }, {})
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
@@ -292,9 +275,7 @@ function App() {
         {/* Tab Content */}
         {activeTab === 'calendar' && (
           <CalendarView
-            monthDays={monthDays}
-            eventsByDay={eventsByDay}
-            currentDate={currentDate}
+            events={events}
             onEventClick={editEvent}
           />
         )}

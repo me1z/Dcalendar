@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Users, Clo
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isTomorrow, isYesterday } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
-function CalendarView({ events, onEventClick }) {
+function CalendarView({ events = [], onEventClick }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState('month') // month, week, day
   
@@ -30,10 +30,12 @@ function CalendarView({ events, onEventClick }) {
   }, [currentDate])
 
   const monthEvents = useMemo(() => {
+    if (!events || !Array.isArray(events)) return []
     return events.filter(event => isSameMonth(new Date(event.date), currentDate))
   }, [events, currentDate])
 
   const getEventsForDay = (day) => {
+    if (!monthEvents || !Array.isArray(monthEvents)) return []
     return monthEvents.filter(event => isSameDay(new Date(event.date), day))
   }
 
