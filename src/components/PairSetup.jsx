@@ -16,12 +16,31 @@ function PairSetup({ onClose, onPairCreated }) {
     syncStatus,
     generatePairCode,
     connectToPair,
-    disconnectFromPair
+    disconnectFromPair,
+    notifyPartnerConnected
   } = usePairSync()
 
   const handleCreatePair = () => {
     generatePairCode()
     setMode('create')
+    
+    // Запускаем проверку подключения партнера
+    const checkPartnerConnection = setInterval(() => {
+      if (isPaired && partnerInfo) {
+        clearInterval(checkPartnerConnection)
+        // Партнер подключился, закрываем модальное окно
+        if (onPairCreated) {
+          onPairCreated()
+        } else {
+          onClose()
+        }
+      }
+    }, 1000)
+    
+    // Останавливаем проверку через 5 минут
+    setTimeout(() => {
+      clearInterval(checkPartnerConnection)
+    }, 5 * 60 * 1000)
   }
 
   const handleJoinPair = () => {

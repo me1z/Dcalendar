@@ -39,6 +39,19 @@ export function usePairSync() {
       setIsPaired(true)
       setSyncStatus('connected')
       
+      // Уведомляем создателя пары о подключении
+      // Ищем все другие вкладки/окна с тем же кодом пары
+      try {
+        localStorage.setItem('partnerConnected', 'true')
+        // Отправляем событие в localStorage для синхронизации между вкладками
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'partnerConnected',
+          newValue: 'true'
+        }))
+      } catch (error) {
+        console.log('Ошибка уведомления о подключении:', error)
+      }
+      
       // Принудительно обновляем состояние
       setTimeout(() => {
         window.location.reload()
@@ -50,6 +63,15 @@ export function usePairSync() {
       throw error
     }
   }, [setPairCode])
+
+  // Функция для уведомления о подключении партнера (для создателя пары)
+  const notifyPartnerConnected = useCallback(() => {
+    // Устанавливаем флаг, что партнер подключился
+    localStorage.setItem('partnerConnected', 'true')
+    // Принудительно обновляем состояние
+    setIsPaired(true)
+    setSyncStatus('connected')
+  }, [])
 
   // Отключение от пары
   const disconnectFromPair = useCallback(() => {
@@ -87,6 +109,46 @@ export function usePairSync() {
       setIsPaired(true)
       setSyncStatus('connected')
     }
+    
+    // Проверяем, не подключился ли партнер к создателю
+    const partnerConnected = localStorage.getItem('partnerConnected')
+    if (pairCode && !partnerInfo && partnerConnected === 'true') {
+      // Партнер подключился к создателю
+      const mockPartnerInfo = {
+        id: Date.now().toString(),
+        name: 'Партнер',
+        avatar: null,
+        lastSeen: new Date().toISOString()
+      }
+      setPartnerInfo(mockPartnerInfo)
+      setIsPaired(true)
+      setSyncStatus('connected')
+      // Очищаем флаг
+      localStorage.removeItem('partnerConnected')
+    }
+  }, [pairCode, partnerInfo])
+
+  // Слушаем изменения в localStorage для синхронизации между вкладками
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'partnerConnected' && e.newValue === 'true') {
+        if (pairCode && !partnerInfo) {
+          // Партнер подключился к создателю
+          const mockPartnerInfo = {
+            id: Date.now().toString(),
+            name: 'Партнер',
+            avatar: null,
+            lastSeen: new Date().toISOString()
+          }
+          setPartnerInfo(mockPartnerInfo)
+          setIsPaired(true)
+          setSyncStatus('connected')
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [pairCode, partnerInfo])
 
   return {
@@ -97,6 +159,7 @@ export function usePairSync() {
     generatePairCode,
     connectToPair,
     disconnectFromPair,
-    syncData
+    syncData,
+    notifyPartnerConnected
   }
 }
