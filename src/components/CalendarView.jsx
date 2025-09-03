@@ -83,9 +83,6 @@ function CalendarView({ events = [], onEventClick, onCreateEvent }) {
   }
 
   const getDateLabel = (day) => {
-    if (isToday(day)) return 'Сегодня'
-    if (isTomorrow(day)) return 'Завтра'
-    if (isYesterday(day)) return 'Вчера'
     return format(day, 'd', { locale: ru })
   }
 
@@ -222,7 +219,10 @@ function CalendarView({ events = [], onEventClick, onCreateEvent }) {
                   return (
                     <div
                       key={event.id}
-                      onClick={() => onEventClick(event)}
+                      onClick={(e) => {
+                        e.stopPropagation() // Предотвращаем всплытие события
+                        onEventClick && onEventClick(event)
+                      }}
                       className={`text-xs p-1 rounded cursor-pointer transition-all duration-200 mobile-tap ${
                         event.type === 'event' 
                           ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 

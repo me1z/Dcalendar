@@ -160,6 +160,31 @@ export function usePairSync() {
     }
   }, [pairCode, partnerInfo])
 
+  // Дополнительная проверка для создателя пары
+  useEffect(() => {
+    if (pairCode && !partnerInfo) {
+      // Создатель пары - проверяем каждые 2 секунды, не подключился ли партнер
+      const interval = setInterval(() => {
+        const partnerConnected = localStorage.getItem('partnerConnected')
+        if (partnerConnected === 'true') {
+          const mockPartnerInfo = {
+            id: Date.now().toString(),
+            name: 'Партнер',
+            avatar: null,
+            lastSeen: new Date().toISOString()
+          }
+          setPartnerInfo(mockPartnerInfo)
+          setIsPaired(true)
+          setSyncStatus('connected')
+          localStorage.removeItem('partnerConnected')
+          clearInterval(interval)
+        }
+      }, 2000)
+
+      return () => clearInterval(interval)
+    }
+  }, [pairCode, partnerInfo])
+
   // Слушаем изменения в localStorage для синхронизации между вкладками
   useEffect(() => {
     const handleStorageChange = (e) => {

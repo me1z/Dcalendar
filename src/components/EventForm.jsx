@@ -27,7 +27,14 @@ function EventForm({ onSubmit, onClose, event, selectedDate }) {
       })
     } else {
       // Устанавливаем выбранную дату или сегодняшнюю по умолчанию
-      const defaultDate = selectedDate || new Date().toISOString().split('T')[0]
+      let defaultDate
+      if (selectedDate) {
+        // Если есть выбранная дата из календаря, используем её
+        defaultDate = selectedDate.toISOString().split('T')[0]
+      } else {
+        // Иначе используем сегодняшнюю дату
+        defaultDate = new Date().toISOString().split('T')[0]
+      }
       setFormData(prev => ({ ...prev, date: defaultDate, type: 'task' }))
     }
   }, [event, selectedDate])
