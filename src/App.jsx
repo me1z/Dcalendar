@@ -30,15 +30,21 @@ function App() {
 
   const { sendNotification, sendPairNotification } = useNotifications()
   const { user: telegramUser, theme, showAlert } = useTelegramApp()
-  const { user, login, createPair, joinPair, logout } = useAuth()
+  const { user, login, testLogin, createPair, joinPair, logout } = useAuth()
   const { fetchEvents, createEvent: apiCreateEvent, updateEvent: apiUpdateEvent, deleteEvent: apiDeleteEvent, loading } = useEvents()
 
-  // Авторизация через Telegram при загрузке
+  // Авторизация через Telegram или тестовый режим при загрузке
   useEffect(() => {
-    if (telegramUser && !user) {
-      login(telegramUser.id, telegramUser.first_name)
+    if (!user) {
+      if (telegramUser) {
+        // Если в Telegram - логинимся через Telegram
+        login(telegramUser.id, telegramUser.first_name)
+      } else {
+        // Если не в Telegram - выполняем тестовый логин
+        testLogin()
+      }
     }
-  }, [telegramUser, user, login])
+  }, [telegramUser, user, login, testLogin])
 
   // Загрузка событий при авторизации
   useEffect(() => {
@@ -248,7 +254,10 @@ function App() {
     return (
       <div className={`min-h-screen iphone-no-scroll ${theme === 'dark' ? 'dark' : ''}`}>
         <Analytics />
-        <PairRequired onCreatePair={() => setShowPairSetup(true)} />
+        <PairRequired 
+          onCreatePair={() => setShowPairSetup(true)} 
+          user={user}
+        />
         
         {/* Pair Setup Modal */}
         {showPairSetup && (
@@ -284,9 +293,16 @@ function App() {
               
               <div className="flex items-center gap-3">
                 <Calendar className="w-8 h-8 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  DCalendar
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                    DCalendar
+                  </h1>
+                  {user?.isTestUser && (
+                    <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full text-xs font-medium">
+                      🧪 Тест
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -481,11 +497,12 @@ function App() {
         />
       )}
 
-      {showProfileSettings && (
-        <ProfileSettings 
-          onClose={() => setShowProfileSettings(false)}
-        />
-      )}
+              {showProfileSettings && (
+          <ProfileSettings
+            onClose={() => setShowProfileSettings(false)}
+            user={user}
+          />
+        )}
 
       {/* Floating Action Button for Mobile */}
       <button

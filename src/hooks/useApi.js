@@ -63,8 +63,8 @@ export function useAuth() {
     try {
       const response = await post('/auth', {
         action: 'login',
-        telegramId,
-        name
+        telegramId: telegramId || null, // Может быть null для тестового режима
+        name: name || 'Тестовый пользователь'
       });
 
       if (response.success) {
@@ -120,12 +120,18 @@ export function useAuth() {
     setUser(null);
   }, []);
 
+  const testLogin = useCallback(async () => {
+    // Тестовый логин без Telegram
+    return await login(null, 'Тестовый пользователь');
+  }, [login]);
+
   return {
     user,
     token,
     loading,
     error,
     login,
+    testLogin,
     createPair,
     joinPair,
     logout,

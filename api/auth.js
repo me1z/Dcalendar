@@ -13,20 +13,27 @@ export default async function handler(req, res) {
     const { action, telegramId, name, pairCode } = req.body;
 
     if (action === 'login') {
-      // Логин через Telegram ID
+      // Логин через Telegram ID или тестовый режим
       const usersCollection = await getCollection('users');
       
-      let user = await usersCollection.findOne({ telegramId });
+      // Если нет telegramId, используем тестовый режим
+      let actualTelegramId = telegramId;
+      if (!actualTelegramId) {
+        actualTelegramId = 'test_user_' + Math.random().toString(36).substring(2, 8);
+      }
+      
+      let user = await usersCollection.findOne({ telegramId: actualTelegramId });
       
       if (!user) {
         // Создаем нового пользователя
         user = {
-          telegramId,
-          name: name || 'Пользователь',
+          telegramId: actualTelegramId,
+          name: name || 'Тестовый пользователь',
           createdAt: new Date(),
           updatedAt: new Date(),
           pairCode: null,
-          partnerId: null
+          partnerId: null,
+          isTestUser: !telegramId // Помечаем тестовых пользователей
         };
         
         const result = await usersCollection.insertOne(user);
@@ -40,17 +47,18 @@ export default async function handler(req, res) {
         { expiresIn: '30d' }
       );
 
-      return res.status(200).json({
-        success: true,
-        token,
-        user: {
-          id: user._id,
-          telegramId: user.telegramId,
-          name: user.name,
-          pairCode: user.pairCode,
-          partnerId: user.partnerId
-        }
-      });
+              return res.status(200).json({
+          success: true,
+          token,
+          user: {
+            id: user._id,
+            telegramId: user.telegramId,
+            name: user.name,
+            pairCode: user.pairCode,
+            partnerId: user.partnerId,
+            isTestUser: user.isTestUser || false
+          }
+        });
     }
 
     if (action === 'create-pair') {

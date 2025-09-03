@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { User, Trash2, AlertCircle, Settings, X } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 
-function ProfileSettings({ onClose }) {
+function ProfileSettings({ onClose, user }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPairDeleteConfirm, setShowPairDeleteConfirm] = useState(false)
   
@@ -54,6 +54,16 @@ function ProfileSettings({ onClose }) {
               <p>• Все данные хранятся локально на вашем устройстве</p>
               <p>• При удалении профиля все данные будут потеряны</p>
               <p>• Действие нельзя отменить</p>
+              {user?.isTestUser && (
+                <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900 rounded-md">
+                  <p className="text-yellow-800 dark:text-yellow-200 font-medium">
+                    🧪 Тестовый режим
+                  </p>
+                  <p className="text-yellow-700 dark:text-yellow-300 text-xs">
+                    Вы используете приложение в тестовом режиме без Telegram
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

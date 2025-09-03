@@ -1,7 +1,7 @@
 import React from 'react'
 import { Users, Lock, Calendar, Heart } from 'lucide-react'
 
-function PairRequired({ onCreatePair }) {
+function PairRequired({ onCreatePair, user }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full p-6 shadow-lg safe-area-all">
@@ -11,9 +11,17 @@ function PairRequired({ onCreatePair }) {
         </div>
         
         {/* Title */}
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          Добро пожаловать в DCalendar
-        </h1>
+        <div className="text-center mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Добро пожаловать в DCalendar
+          </h1>
+          {user?.isTestUser && (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full text-sm font-medium">
+              <span>🧪</span>
+              <span>Тестовый режим</span>
+            </div>
+          )}
+        </div>
         
         {/* Description */}
         <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
@@ -52,9 +60,16 @@ function PairRequired({ onCreatePair }) {
         </button>
         
         {/* Footer */}
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
-          Приложение работает только для пар
-        </p>
+        <div className="text-sm text-gray-500 dark:text-gray-400 mt-6">
+          {user?.isTestUser ? (
+            <div className="text-center">
+              <p>🧪 Тестовый режим - данные не сохраняются</p>
+              <p className="mt-1">Для продакшена используйте Telegram</p>
+            </div>
+          ) : (
+            <p>Приложение работает только для пар</p>
+          )}
+        </div>
       </div>
     </div>
   )
